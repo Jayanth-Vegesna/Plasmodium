@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Plasmodium falciparum Systems Biology</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 50px; display: flex; flex-direction: column; align-items: center; }
+        h1 { font-size: 2.5em; margin-bottom: 10px; color: #fff; text-align: center; }
+        h1 i { color: #4ea8de; }
+        p.subtitle { color: #888; font-size: 1.2em; margin-bottom: 50px; text-align: center; max-width: 600px; line-height: 1.5; }
+        
+        .card-container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; max-width: 1200px; }
+        
+        .card { background: #151515; border: 1px solid #333; border-radius: 12px; padding: 30px; width: 300px; text-align: center; transition: transform 0.2s, border-color 0.2s; text-decoration: none; display: block; }
+        .card:hover { transform: translateY(-5px); border-color: #4ea8de; }
+        
+        .card-icon { font-size: 3em; margin-bottom: 15px; }
+        .card-title { color: #fff; font-size: 1.5em; margin-bottom: 10px; font-weight: bold; }
+        .card-desc { color: #aaa; font-size: 0.95em; line-height: 1.4; }
+
+        /* Specific Highlights */
+        .card.proteome:hover { border-color: #4caf50; }
+        .card.genome:hover { border-color: #9c27b0; }
+        .card.interactome:hover { border-color: #ffd700; }
+    </style>
+</head>
+<body>
+
+    <h1><i>Plasmodium falciparum</i> Multi-Omics Portal</h1>
+    <p class="subtitle">An interactive systems biology suite for exploring the genome, structural proteome, and drug-target interaction networks of the malaria parasite.</p>
+
+    <div class="card-container">
+        
+        <!-- Link to Genome Browser -->
+        <a href="genome.html" class="card genome">
+            <div class="card-icon">🧬</div>
+            <div class="card-title">Genome Browser</div>
+            <div class="card-desc">Navigate the parasite's chromosomes, explore annotations, and extract FASTA sequences dynamically.</div>
+        </a>
+
+        <!-- Link to Proteome Viewer -->
+        <a href="proteome.html" class="card proteome">
+            <div class="card-icon">🔬</div>
+            <div class="card-title">Proteome Explorer</div>
+            <div class="card-desc">Search and visualize AlphaFold 3D structures for thousands of P. falciparum proteins.</div>
+        </a>
+
+        <!-- Link to Interactome -->
+        <a href="interactome.html" class="card interactome">
+            <div class="card-icon">🕸️</div>
+            <div class="card-title">Hemoglobin Interactome</div>
+            <div class="card-desc">Interactive physics network mapping the digestive vacuole, highlighting validated drug targets in gold.</div>
+        </a>
+
+    </div>
+
+</body>
+</html>

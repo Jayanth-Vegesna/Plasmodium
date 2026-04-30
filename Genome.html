@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Plasmodium Genome Browser</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        
+        /* Dashboard Header: Controls on Left, Info on Right */
+        .dashboard-header { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
+        .controls-wrapper { display: flex; flex-direction: column; gap: 15px; flex: 1; }
+        
+        .controls { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; display: flex; gap: 15px; align-items: center; }
+        .controls h2 { margin: 0; padding-right: 15px; border-right: 1px solid #444; }
+        select, button { padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; }
+        select:focus, button:hover { border-color: #64b5f6; }
+        
+        #legend { display: flex; gap: 15px; flex-wrap: wrap; background: #1e1e1e; padding: 12px 20px; border-radius: 8px; border: 1px solid #333; font-size: 0.9em; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-box { width: 14px; height: 14px; border-radius: 3px; }
+
+        /* Top Right Info Panel (Metadata Only) */
+        .info-panel { flex: 0 0 350px; background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: center; }
+        
+        /* SVG Browser Area */
+        #browser-container { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; position: relative; }
+        
+        /* Bottom Sequence Panel */
+        .sequence-panel { background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 15px; margin-top: 15px; font-family: monospace; color: #4caf50; font-size: 0.9em; max-height: 100px; overflow-y: auto; word-break: break-all; white-space: normal; }
+        .seq-placeholder { color: #555; font-style: italic; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* SVG Element Styling */
+        .axis text { fill: #aaa; font-size: 10px; }
+        .axis path, .axis line { stroke: #444; }
+        .feature { cursor: pointer; transition: filter 0.1s, stroke 0.1s; }
+        .feature:hover { filter: brightness(1.6); stroke: #fff; stroke-width: 1px; }
+        .strand-label { fill: #888; font-size: 12px; font-weight: bold; pointer-events: none; }
+        .track-title { fill: #fff; font-size: 14px; font-weight: bold; pointer-events: none; }
+        .dna-text { fill: #121212; font-family: monospace; font-size: 12px; font-weight: bold; pointer-events: none; }
+        .selection { fill: #64b5f6; fill-opacity: 0.3; stroke: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-header">
+        <div class="controls-wrapper">
+            <div class="controls">
+                <h2>🔬 Plasmodium Genome Browser</h2>
+                <select id="chrom-select"><option value="">Select a Chromosome...</option></select>
+                <button onclick="resetZoom()">Reset Zoom</button>
+            </div>
+            <div id="legend"></div>
+        </div>
+        <!-- Metadata window (Updates on Hover) -->
+        <div id="info-panel" class="info-panel">
+            <div style="color: #666; font-style: italic;">Hover over a feature to view metadata...</div>
+        </div>
+    </div>
+
+    <div id="browser-container">
+        <svg id="genome-svg" width="100%" height="380"></svg>
+    </div>
+
+    <!-- Bottom sequence window (Updates on Click) -->
+    <div id="sequence-panel" class="sequence-panel">
+        <div class="seq-placeholder">Click on a genomic feature to view its FASTA sequence here...</div>
+    </div>
+
+    <!-- Make sure this path still points to your GENOMIC folder -->
+    <script src="GENOMIC/genome_data.js"></script>
+
+    <script>
+        const colorScale = {"CDS": "#4caf50", "five_prime_UTR": "#00e5ff", "three_prime_UTR": "#2979ff", "intron": "#666666", "pseudogene": "#9e9e9e", "tRNA": "#ff9800", "rRNA": "#f44336"};
+        const displayNames = {"five_prime_UTR": "5' UTR", "three_prime_UTR": "3' UTR"};
+        const getDisplayName = (t) => displayNames[t] || t;
+
+        function formatChromosomeName(rawName) {
+            const match = rawName.match(/Pf3D7_(\d+)_v3/i);
+            if (match) {
+                return "Chromosome " + parseInt(match[1], 10);
+            } else if (rawName.includes("API")) {
+                return "Apicoplast Genome";
+            } else if (rawName.includes("M76611") || rawName.includes("MIT")) {
+                return "Mitochondrial Genome";
+            }
+            return rawName; 
+        }
+
+        const legendDiv = document.getElementById("legend");
+        for (const [type, color] of Object.entries(colorScale)) {
+            legendDiv.innerHTML += `<div class="legend-item"><div class="legend-box" style="background: ${color};"></div><span>${getDisplayName(type)}</span></div>`;
+        }
+
+        const svg = d3.select("#genome-svg");
+        const container = document.getElementById('browser-container');
+        
+        let width = container.clientWidth - 40;
+        let margin = {left: 20, right: 20};
+        
+        let globalSvg = svg;
+        let globalZoom = null;
+        
+        window.onload = function() {
+            if (!window.GenomeData) {
+                alert("Error: Could not load data from GENOMIC/genome_data.js. Make sure the folder exists and the file is inside it!");
+                return;
+            }
+
+            const chromSelect = document.getElementById('chrom-select');
+            Object.keys(window.GenomeData).sort().forEach(chrom => {
+                const cleanName = formatChromosomeName(chrom);
+                chromSelect.appendChild(new Option(cleanName, chrom));
+            });
+
+            chromSelect.addEventListener('change', function() { if(this.value) drawBrowser(this.value); });
+        };
+
+        function getFeatureStyles(d, isY) {
+            let base_y = d.strand === "+" ? 20 : 100; 
+            let h = 24; 
+            if (d.type.includes("UTR")) { h = 12; base_y += 6; } 
+            else if (d.type === "intron") { h = 2; base_y += 11; }
+            return isY ? base_y : h;
+        }
+
+        function drawBrowser(chrom) {
+            svg.selectAll("*").remove(); 
+            const features = window.GenomeData[chrom];
+            const maxLen = window.ChromosomeLengths[chrom];
+            const infoPanel = document.getElementById("info-panel");
+            const sequencePanel = document.getElementById("sequence-panel");
+
+            const xScaleMain = d3.scaleLinear().domain([0, maxLen]).range([margin.left, width - margin.right]);
+            const xScaleMini = d3.scaleLinear().domain([0, maxLen]).range([margin.left, width - margin.right]);
+
+            // --- 1. THE MINI-MAP TRACK (Top) ---
+            const miniGroup = svg.append("g").attr("transform", "translate(0, 20)");
+            
+            const cleanTitle = formatChromosomeName(chrom) + " Overview";
+            miniGroup.append("text").attr("class", "track-title").attr("x", margin.left).attr("y", -5).text(cleanTitle);
+            
+            miniGroup.selectAll("rect").data(features).enter().append("rect")
+                .attr("fill", d => colorScale[d.type] || "#fff")
+                .attr("x", d => xScaleMini(d.start))
+                .attr("y", d => d.strand === "+" ? 10 : 25)
+                .attr("width", d => Math.max(1, xScaleMini(d.end) - xScaleMini(d.start)))
+                .attr("height", 5);
+
+            const brush = d3.brushX().extent([[margin.left, 0], [width - margin.right, 40]]).on("brush end", brushed);
+            const brushGroup = miniGroup.append("g").attr("class", "brush").call(brush);
+            
+            // --- 2. THE MAIN FEATURE TRACK (Bottom) ---
+            const mainGroup = svg.append("g").attr("transform", "translate(0, 130)");
+            
+            mainGroup.append("text").attr("class", "track-title").attr("x", margin.left).attr("y", -10).text("Annotated Features");
+            
+            mainGroup.append("text").attr("class", "strand-label").attr("x", margin.left).attr("y", 15).text("+");
+            mainGroup.append("text").attr("class", "strand-label").attr("x", margin.left).attr("y", 95).text("-");
+
+            const xAxisMain = d3.axisBottom(xScaleMain).ticks(10).tickFormat(d3.format(".2s"));
+            const xAxisGroup = mainGroup.append("g").attr("class", "axis").attr("transform", "translate(0, 150)").call(xAxisMain);
+
+            xAxisGroup.append("text")
+                .attr("x", width / 2)
+                .attr("y", 40)
+                .attr("fill", "#888")
+                .style("text-anchor", "middle")
+                .style("font-size", "12px")
+                .style("font-weight", "bold")
+                .text("Genomic Coordinate (Base Pairs)");
+
+            svg.append("clipPath").attr("id", "clip").append("rect").attr("width", width - margin.left - margin.right).attr("height", 200).attr("x", margin.left).attr("y", 0);
+            
+            const featureGroup = mainGroup.append("g").attr("clip-path", "url(#clip)");
+            const textGroup = mainGroup.append("g").attr("clip-path", "url(#clip)"); 
+
+            const rects = featureGroup.selectAll("rect").data(features).enter().append("rect")
+                .attr("class", "feature")
+                .attr("fill", d => colorScale[d.type] || "#ffffff")
+                .attr("x", d => xScaleMain(d.start))
+                .attr("y", d => getFeatureStyles(d, true))
+                .attr("width", d => Math.max(1.5, xScaleMain(d.end) - xScaleMain(d.start))) 
+                .attr("height", d => getFeatureStyles(d, false))
+                .on("mouseover", function(event, d) {
+                    infoPanel.innerHTML = `
+                        <div style="color: ${colorScale[d.type] || '#fff'}; font-weight: bold; font-size: 1.3em; border-bottom: 1px solid #333; padding-bottom: 5px;">${getDisplayName(d.type).toUpperCase()}</div>
+                        <div style="margin-top: 10px; font-size: 1.05em;"><b>ID:</b> ${d.name} <br><b>Range:</b> ${d.start.toLocaleString()} - ${d.end.toLocaleString()}</div>
+                    `;
+                })
+                .on("click", function(event, d) {
+                    sequencePanel.innerHTML = d.seq ? d.seq : "<span class='seq-placeholder'>No sequence available for this feature.</span>";
+                });
+
+            // --- SYNCHRONIZED ZOOM & BRUSH LOGIC ---
+            globalZoom = d3.zoom().scaleExtent([1, 100000])
+                .translateExtent([[margin.left, 0], [width - margin.right, 0]])
+                .on("zoom", zoomed);
+
+            svg.call(globalZoom);
+
+            function brushed(event) {
+                if (event.sourceEvent && event.sourceEvent.type === "zoom") return; 
+                const s = event.selection || xScaleMini.range();
+                const k = (width - margin.left - margin.right) / (s[1] - s[0]);
+                const tx = margin.left - s[0] * k;
+                
+                svg.property("__zoom", d3.zoomIdentity.translate(tx, 0).scale(k));
+                updateViews(d3.zoomIdentity.translate(tx, 0).scale(k));
+            }
+
+            function zoomed(event) {
+                if (event.sourceEvent && event.sourceEvent.type === "brush") return; 
+                const t = event.transform;
+                brushGroup.call(brush.move, xScaleMain.range().map(t.invertX, t));
+                updateViews(t);
+            }
+
+            function updateViews(transform) {
+                const newX = transform.rescaleX(xScaleMain);
+                
+                xAxisGroup.call(xAxisMain.scale(newX));
+                rects.attr("x", d => newX(d.start))
+                     .attr("width", d => Math.max(1.5, newX(d.end) - newX(d.start)));
+                
+                // Semantic Zoom Sequence Injection
+                textGroup.selectAll("text").remove();
+                if (transform.k > 20000) { 
+                    const visibleFeatures = features.filter(d => newX(d.start) < width && newX(d.end) > 0 && d.type === "CDS");
+                    
+                    visibleFeatures.forEach(d => {
+                        const letterWidth = (newX(d.end) - newX(d.start)) / d.seq.length;
+                        if (letterWidth > 8) { 
+                            for(let i=0; i<d.seq.length; i++) {
+                                let charX = newX(d.start) + (i * letterWidth) + (letterWidth/2) - 4;
+                                if(charX > margin.left && charX < width - margin.right) {
+                                    textGroup.append("text")
+                                        .attr("class", "dna-text")
+                                        .attr("x", charX)
+                                        .attr("y", d.strand === "+" ? 36 : 116)
+                                        .text(d.seq[i]);
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // --- NEW RESET LOGIC ---
+        // Clears zoom, metadata, and sequence views simultaneously.
+        window.resetZoom = () => {
+            if (globalSvg && globalZoom) {
+                globalSvg.transition().duration(750).call(globalZoom.transform, d3.zoomIdentity);
+            }
+            
+            const infoPanel = document.getElementById("info-panel");
+            if (infoPanel) {
+                infoPanel.innerHTML = '<div style="color: #666; font-style: italic;">Hover over a feature to view metadata...</div>';
+            }
+            
+            const sequencePanel = document.getElementById("sequence-panel");
+            if (sequencePanel) {
+                sequencePanel.innerHTML = '<div class="seq-placeholder">Click on a genomic feature to view its FASTA sequence here...</div>';
+            }
+        };
+    </script>
+</body>
+</html>
