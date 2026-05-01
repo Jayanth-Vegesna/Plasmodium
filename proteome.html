@@ -1,41 +1,30 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>P. falciparum Proteome</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; margin: 0; }
         .controls { position: sticky; top: 0; background: #1e1e1e; padding: 20px; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
         .header-flex { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px; }
-        .title-area h1 { margin: 0 0 5px 0; color: #ffffff; }
-        .title-area h3 { margin: 0 0 15px 0; color: #888; font-weight: normal; }
+        
+        .back-btn { display: inline-block; background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.9em; margin-bottom: 15px; border: 1px solid #444; transition: all 0.2s; font-weight: bold; }
+        .back-btn:hover { background: #333; color: #fff; border-color: #64b5f6; }
+        
+        /* Matched Title Size and Italics to Genome Browser style */
+        .title-area h2 { margin: 0 0 15px 0; color: #ffffff; font-size: 1.4em; }
+        
         .stats-container { display: flex; gap: 15px; background: #2a2a2a; padding: 15px; border-radius: 8px; border: 1px solid #444; }
         .stat-box { display: flex; flex-direction: column; align-items: center; min-width: 120px; }
         .stat-value { font-size: 1.4em; font-weight: bold; color: #64b5f6; }
         .stat-label { font-size: 0.85em; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
         
-        /* Grid Optimization */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
         
-        /* High-Performance Card Styling */
-        .card { 
-            background: #1e1e1e; 
-            padding: 15px; 
-            border-radius: 10px; 
-            text-align: center; 
-            border: 1px solid #333; 
-            cursor: pointer; 
-            position: relative;
-            
-            /* The Magic Performance Fixes */
-            content-visibility: auto;
-            contain-intrinsic-size: 250px 320px; /* Prevents scrollbar jumping */
-            transition: transform 0.2s, border-color 0.2s; /* Strict targeting, no 'all' */
-            will-change: transform; /* Hints the GPU */
-        }
-        
-        /* Removed heavy box-shadows on hover to save GPU */
+        .card { background: #1e1e1e; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #333; cursor: pointer; position: relative; content-visibility: auto; contain-intrinsic-size: 250px 320px; transition: transform 0.2s, border-color 0.2s; will-change: transform; }
         .card:hover { transform: translateY(-5px); border-color: #64b5f6; }
         .card img { width: 100%; height: auto; border-radius: 6px; background: #2a2a2a; margin-bottom: 10px; min-height: 180px; display: block; }
 
@@ -45,28 +34,44 @@
         .high { color: #4caf50; }
         .medium { color: #ffeb3b; }
         .low { color: #ff9800; }
-        input[type="text"] { padding: 10px; width: 100%; max-width: 400px; border: 1px solid #444; border-radius: 6px; background: #2a2a2a; color: #fff; font-size: 1em; box-sizing: border-box; }
         
-        /* Modal Styles */
+        input[type="text"] { padding: 12px; width: 100%; max-width: 400px; border: 1px solid #444; border-radius: 6px; background: #2a2a2a; color: #fff; font-size: 1em; box-sizing: border-box; }
+        #search-hits { display: block; margin-top: 8px; color: #64b5f6; font-size: 0.9em; font-weight: bold; min-height: 1.2em; }
+        
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 80%; max-width: 900px; height: 80%; display: flex; flex-direction: column; position: relative; border: 1px solid #444; }
-        .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; padding-right: 40px; }
         .modal-title { margin: 0; color: #fff; font-size: 1.5em; }
         .modal-meta-container { margin-top: 8px; font-size: 0.95em; }
-        .close-btn { background: none; border: none; color: #aaa; font-size: 2em; cursor: pointer; line-height: 1; padding: 0 10px; }
-        .close-btn:hover { color: #fff; }
-        #viewer_div { flex-grow: 1; background: #121212; border-radius: 8px; position: relative; margin-top: 10px; }
         
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: #aaa; font-size: 2em; cursor: pointer; line-height: 1; padding: 5px; transition: color 0.2s; z-index: 10; }
+        .close-btn:hover { color: #fff; }
+        
+        #viewer_div { flex-grow: 1; background: #121212; border-radius: 8px; position: relative; margin-top: 10px; }
         .loading-text { color: #64b5f6; font-weight: bold; margin-top: 10px; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .controls { padding: 15px; }
+            .header-flex { flex-direction: column; align-items: stretch; gap: 10px; }
+            input[type="text"] { max-width: 100%; }
+            .stats-container { flex-wrap: wrap; justify-content: center; }
+            .stat-box { min-width: 45%; margin-bottom: 5px; }
+            .modal-content { width: 95%; height: 95%; padding: 15px; padding-top: 50px; border-radius: 8px; box-sizing: border-box; }
+            .modal-header { flex-direction: column; border-bottom: none; padding-bottom: 0; }
+            .close-btn { top: 10px; right: 10px; font-size: 2.2em; background: #333; border: 1px solid #555; border-radius: 8px; padding: 2px 15px 6px 15px; color: #fff; }
+        }
     </style>
 </head>
 <body>
     <div class="controls">
         <div class="header-flex">
             <div class="title-area">
-                <h1><i>Plasmodium falciparum</i> Proteome</h1>
-                <h3>By Jayanth Vegesna</h3>
+                <a href="index.html" class="back-btn">&larr; Back to Dashboard</a>
+                
+                <h2><i>Plasmodium falciparum</i> Proteome</h2>
                 <input type="text" id="search" placeholder="Search by UniProt ID or Name..." onkeyup="filterCards()">
+                <span id="search-hits"></span>
             </div>
             <div class="stats-container">
                 <div class="stat-box">
@@ -41453,9 +41458,23 @@
         function filterCards() {
             let input = document.getElementById('search').value.toUpperCase();
             let cards = document.getElementsByClassName('card');
+            let hitCount = 0;
+            
             for (let i = 0; i < cards.length; i++) {
                 let searchData = cards[i].getAttribute('data-search');
-                cards[i].style.display = searchData.includes(input) ? "" : "none";
+                if (searchData.includes(input)) {
+                    cards[i].style.display = "";
+                    hitCount++;
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
+            
+            let hitsDisplay = document.getElementById('search-hits');
+            if (input.trim() === "") {
+                hitsDisplay.innerText = "";
+            } else {
+                hitsDisplay.innerText = "Found " + hitCount + " matching proteins";
             }
         }
 
@@ -41486,9 +41505,7 @@
             document.getElementById('status').innerText = "Loading structure data...";
 
             if (!viewer) {
-                let element = document.getElementById('viewer_div');
-                let config = { backgroundColor: '#121212' };
-                viewer = $3Dmol.createViewer(element, config);
+                viewer = $3Dmol.createViewer(document.getElementById('viewer_div'), { backgroundColor: '#121212' });
             } else {
                 viewer.clear();
             }
@@ -41496,24 +41513,19 @@
             let script = document.createElement('script');
             script.src = jsPath;
             script.id = 'temp-pdb-script';
-            
-            let oldScript = document.getElementById('temp-pdb-script');
-            if(oldScript) oldScript.remove();
-            
+            if(document.getElementById('temp-pdb-script')) document.getElementById('temp-pdb-script').remove();
             document.body.appendChild(script);
         }
 
         window.receivePDBData = function(uid, pdbData) {
             document.getElementById('status').innerText = "";
             viewer.addModel(pdbData, "pdb");
-            
-            let colorAlphaFold = function(atom) {
+            let colorAlphaFold = (atom) => {
                 if(atom.b > 90) return '#0053d6'; 
                 if(atom.b > 70) return '#65cbf3'; 
                 if(atom.b > 50) return '#ffdb13'; 
                 return '#ff7d45'; 
             };
-            
             viewer.setStyle({}, {cartoon: {colorfunc: colorAlphaFold}});
             viewer.zoomTo();
             viewer.render();

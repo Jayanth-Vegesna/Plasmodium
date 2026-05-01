@@ -2,167 +2,267 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>P. falciparum: Hemoglobin Digestion Network</title>
-    <!-- Load Cytoscape for the Network -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>P. falciparum Egocentric Interactome</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
-    <!-- Load 3Dmol for the Protein Viewer -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        .header { background: #151515; padding: 20px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        .header h1 { margin: 0; font-size: 1.5em; color: #fff; letter-spacing: 1px; }
-        .header p { margin: 5px 0 0 0; color: #666; font-size: 0.9em; }
+        .header { background: #151515; padding: 20px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; z-index: 10; gap: 20px; }
         
+        .title-area { display: flex; flex-direction: column; align-items: flex-start; }
+        .title-area h1 { margin: 0; font-size: 1.5em; color: #fff; letter-spacing: 1px; }
+        .title-area p { margin: 5px 0 0 0; color: #666; font-size: 0.9em; }
+        
+        .action-group { display: flex; gap: 15px; align-items: center; }
+        
+        .back-btn { display: inline-block; background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.9em; margin-bottom: 10px; border: 1px solid #444; transition: all 0.2s; font-weight: bold; box-sizing: border-box; }
+        .back-btn:hover { background: #333; color: #fff; border-color: #4ea8de; }
+        
+        /* NEW: Searchable Input Styling */
+        input[type="text"] { padding: 10px 15px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; min-width: 350px; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: #4ea8de; outline: none; }
+
         #cy { flex-grow: 1; display: block; background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); position: relative; }
         
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4ea8de; font-size: 1.2em; font-weight: bold; pointer-events: none; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4ea8de; font-size: 1.2em; font-weight: bold; pointer-events: none; text-align: center; }
 
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        .modal-content { background: #151515; padding: 25px; border-radius: 8px; width: 85%; max-width: 1000px; height: 85%; display: flex; flex-direction: column; position: relative; border: 1px solid #333; box-shadow: 0 10px 50px rgba(0,0,0,0.8); }
-        .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        .modal-content { background: #151515; padding: 25px; border-radius: 8px; width: 85%; max-width: 1000px; height: 85%; display: flex; flex-direction: column; position: relative; border: 1px solid #333; box-shadow: 0 10px 50px rgba(0,0,0,0.8); box-sizing: border-box; }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 15px; padding-right: 40px; }
         .modal-title { margin: 0; color: #fff; font-size: 1.6em; }
         .modal-meta-container { margin-top: 8px; font-size: 1em; color: #888; }
-        .close-btn { background: none; border: none; color: #666; font-size: 2.5em; cursor: pointer; line-height: 0.8; padding: 0 10px; transition: color 0.2s; }
+        
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: #666; font-size: 2.5em; cursor: pointer; line-height: 0.8; padding: 5px 10px; transition: color 0.2s; z-index: 10; }
         .close-btn:hover { color: #fff; }
+        
         #viewer_div { flex-grow: 1; background: #000; border-radius: 6px; position: relative; margin-top: 10px; border: 1px solid #222; }
+
+        @media (max-width: 768px) {
+            .header { flex-direction: column; align-items: stretch; gap: 15px; padding: 15px; }
+            .title-area { align-items: center; text-align: center; width: 100%; }
+            .back-btn { text-align: center; width: 100%; margin-bottom: 15px; }
+            .action-group { flex-direction: column; align-items: stretch; }
+            input[type="text"] { width: 100%; min-width: 100%; }
+            
+            .modal-content { width: 95%; height: 95%; padding: 15px; padding-top: 50px; }
+            .modal-header { flex-direction: column; border-bottom: none; padding-bottom: 0; }
+            .close-btn { top: 10px; right: 10px; font-size: 2.2em; background: #222; border: 1px solid #444; border-radius: 8px; padding: 2px 15px 6px 15px; color: #fff; z-index: 1001; }
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div>
-            <h1>Hemoglobin Digestion Interactome</h1>
-            <p>Organic physics layout. Hub proteins are scaled and labeled based on connectivity.</p>
+        <div class="title-area">
+            <a href="index.html" class="back-btn">&larr; Back to Dashboard</a>
+            <h1>Egocentric Interactome</h1>
+            <p>Search a central protein to orbit its direct interactors. Click any node to view structure.</p>
         </div>
-        <div style="text-align: right; color: #4ea8de; font-weight: bold; font-size: 0.9em;">
-            Click any node to launch 3D structure
+        <div class="action-group">
+            <!-- NEW: Interactive Search Input with Datalist -->
+            <input type="text" id="protein-search" list="protein-options" placeholder="Search by UniProt ID or Name...">
+            <datalist id="protein-options"></datalist>
         </div>
     </div>
 
-    <!-- Network Canvas -->
     <div id="cy">
-        <div id="loading">Simulating Protein Physics...</div>
+        <div id="loading">Search for a protein to visualize its network...</div>
     </div>
 
-    <!-- 3D Viewer Modal -->
     <div id="modal">
         <div class="modal-content">
+            <button class="close-btn" onclick="closeViewer()">&times;</button>
             <div class="modal-header">
                 <div>
                     <h2 class="modal-title" id="modal-title">Protein ID</h2>
                     <div class="modal-meta-container" id="modal-meta"></div>
                 </div>
-                <button class="close-btn" onclick="closeViewer()">&times;</button>
             </div>
             <div id="viewer_div"></div>
         </div>
     </div>
 
-    <!-- Load the data generated by your Python script -->
-    <script src="network_data.js"></script>
+    <script src="INTERACT/network_data.js"></script>
 
     <script>
-        // --- 1. INITIALIZE CYTOSCAPE ---
-        var cy = cytoscape({
-            container: document.getElementById('cy'),
-            elements: window.NetworkData,
-            
-            style: [
-                {
-                    selector: 'node',
-                    style: {
-                        // Node size grows based on number of connections (degree)
-                        'width': 'mapData(degree, 1, 30, 15, 75)',
-                        'height': 'mapData(degree, 1, 30, 15, 75)',
-                        'background-color': '#4ea8de', 
-                        'label': 'data(gene)',
-                        'color': '#fff',
-                        'text-valign': 'bottom',
-                        'text-margin-y': 8,
-                        // Only show labels for proteins with > 3 connections to prevent overlap
-                        'font-size': 'mapData(degree, 1, 15, 0, 14)',
-                        'text-outline-width': 2,
-                        'text-outline-color': '#000',
-                        'z-index': 10
-                    }
-                },
-                {
-                    selector: 'edge',
-                    style: {
-                        'width': 1.5,
-                        'line-color': '#444',
-                        'opacity': 0.4,
-                        'curve-style': 'haystack' // Fastest rendering for dense networks
-                    }
-                },
-                {
-                    selector: 'node:hover',
-                    style: {
-                        'background-color': '#00ffff',
-                        'scale': 1.2,
-                        'cursor': 'pointer',
-                        'text-margin-y': 12
-                    }
-                }
-            ]
-        });
+        let cy;
 
-        // Calculate Degree (Connectivity) for the styling rules above
-        cy.nodes().forEach(function(n){
-            n.data('degree', n.degree());
-        });
-
-        // --- 2. CONFIGURE PHYSICS LAYOUT ---
-        // 'cose' provides the organic, clumped look from your reference image
-        var layout = cy.layout({
-            name: 'cose',
-            idealEdgeLength: 100,
-            nodeOverlap: 40,
-            refresh: 20,
-            fit: true,
-            padding: 40,
-            randomize: true,
-            componentSpacing: 100,
-            nodeRepulsion: 600000,
-            edgeElasticity: 100,
-            nestingFactor: 5,
-            gravity: 80,
-            numIter: 1000,
-            initialTemp: 200,
-            coolingFactor: 0.95,
-            minTemp: 1.0,
-            stop: function() {
-                document.getElementById('loading').style.display = 'none';
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!window.NetworkData) {
+                alert("Error: Could not load network_data.js. Ensure the python script ran correctly.");
+                return;
             }
-        });
-        
-        layout.run();
 
-        // --- 3. EVENT LISTENERS ---
-        cy.on('tap', 'node', function(evt){
-            var node = evt.target;
-            var uid = node.id();
-            var name = node.data('name');
-            var gene = node.data('gene');
+            // Populate the Datalist with "ID - Name" format
+            const dataList = document.getElementById('protein-options');
+            let sortedNodes = Object.values(window.NetworkData.nodes).sort((a, b) => a.id.localeCompare(b.id));
             
-            // Path to your PDB_JS folder
-            var jsPath = 'PDB_JS/' + uid + '.js';
-            
-            openViewer(jsPath, uid, gene, name);
+            sortedNodes.forEach(node => {
+                let option = document.createElement('option');
+                // The value is what goes into the text box and is searchable
+                option.value = `${node.id} - ${node.name}`;
+                dataList.appendChild(option);
+            });
+
+            // Listen for input changes (typing or selecting from list)
+            const searchInput = document.getElementById('protein-search');
+            searchInput.addEventListener('input', function() {
+                let val = this.value.trim();
+                
+                if (val === "") {
+                    if(cy) cy.elements().remove();
+                    document.getElementById('loading').style.display = 'block';
+                    document.getElementById('loading').innerText = "Search for a protein to visualize its network...";
+                    return;
+                }
+
+                // Extract the ID from the "ID - Name" format string
+                let uidMatch = val.split(' - ')[0];
+                
+                // Trigger the network draw instantly if a valid ID is recognized
+                if(window.NetworkData.nodes[uidMatch]) {
+                    drawEgoNetwork(uidMatch);
+                    this.blur(); // Dismisses mobile keyboard automatically
+                } else if (window.NetworkData.nodes[val]) { // Fallback if they manually type just the ID
+                    drawEgoNetwork(val);
+                    this.blur();
+                }
+            });
+
+            // Initialize Cytoscape Instance
+            cy = cytoscape({
+                container: document.getElementById('cy'),
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'width': 45,
+                            'height': 45,
+                            'background-color': '#4ea8de', 
+                            'label': 'data(label)', // NEW: Uses the custom multi-line label
+                            'color': '#fff',
+                            'text-valign': 'bottom',
+                            'text-margin-y': 8,
+                            'font-size': 11,
+                            'text-wrap': 'wrap', // NEW: Allows \n to drop text to the next line
+                            'text-max-width': '160px', // Prevents long protein names from stretching too far
+                            'text-outline-width': 2,
+                            'text-outline-color': '#000',
+                            'z-index': 10,
+                            'transition-property': 'background-color, scale',
+                            'transition-duration': '0.2s'
+                        }
+                    },
+                    {
+                        selector: 'node[isCenter = "true"]',
+                        style: {
+                            'width': 70,
+                            'height': 70,
+                            'background-color': '#ffca28', 
+                            'font-size': 14,
+                            'font-weight': 'bold',
+                            'text-outline-color': '#ffca28',
+                            'color': '#000',
+                            'z-index': 100
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#444',
+                            'opacity': 0.6,
+                            'curve-style': 'bezier'
+                        }
+                    },
+                    {
+                        selector: 'node:hover',
+                        style: {
+                            'background-color': '#00ffff',
+                            'scale': 1.1,
+                            'cursor': 'pointer'
+                        }
+                    }
+                ]
+            });
+
+            cy.on('tap', 'node', function(evt){
+                var node = evt.target;
+                var uid = node.id();
+                var name = node.data('name');
+                var gene = node.data('gene');
+                
+                var jsPath = 'PDB_JS/' + uid + '.js';
+                openViewer(jsPath, uid, gene, name);
+            });
         });
 
-        // --- 4. 3DMOL VIEWER LOGIC ---
+        // --- 2. DRAW EGO-CENTRIC NETWORK ---
+        function drawEgoNetwork(centerId) {
+            document.getElementById('loading').style.display = 'none';
+            cy.elements().remove(); 
+            
+            let elements = [];
+            let neighbors = new Set();
+            neighbors.add(centerId);
+
+            window.NetworkData.edges.forEach(e => {
+                if (e.source === centerId || e.target === centerId) {
+                    neighbors.add(e.source);
+                    neighbors.add(e.target);
+                    elements.push({ data: { id: e.source+"-"+e.target, source: e.source, target: e.target, weight: e.weight } });
+                }
+            });
+
+            neighbors.forEach(nId => {
+                let nData = window.NetworkData.nodes[nId];
+                if (nData) {
+                    elements.push({ 
+                        data: { 
+                            id: nId, 
+                            gene: nData.gene, 
+                            name: nData.name,
+                            // NEW: Custom label places ID on top, Name on bottom
+                            label: `${nId}\n${nData.name}`, 
+                            isCenter: nId === centerId ? 'true' : 'false'
+                        } 
+                    });
+                }
+            });
+
+            cy.add(elements);
+
+            cy.layout({
+                name: 'concentric',
+                concentric: function(node){
+                  return node.data('isCenter') === 'true' ? 2 : 1;
+                },
+                levelWidth: function(nodes){
+                  return 1;
+                },
+                padding: 50,
+                animate: true,
+                animationDuration: 500
+            }).run();
+        }
+
+        // --- 3. 3DMOL VIEWER LOGIC ---
         let viewer = null;
 
         function openViewer(jsPath, uniprotId, geneId, proteinName) {
             document.getElementById('modal').style.display = 'flex';
-            document.getElementById('modal-title').innerText = geneId + " / " + uniprotId;
             
+            // NEW: Modal Title is now ID - Name
+            document.getElementById('modal-title').innerText = uniprotId + " - " + proteinName;
+            
+            // NEW: Subtitle shows Gene ID and the Link
             document.getElementById('modal-meta').innerHTML = `
-                <span style="color: #fff;">${proteinName}</span>
+                <span style="color: #fff; font-weight: bold;">Gene: ${geneId}</span>
                 <span style="margin: 0 10px; color: #555;">|</span>
-                <a href="https://www.uniprot.org/uniprotkb/${uniprotId}/entry" target="_blank" style="color: #4ea8de; text-decoration: none;">🔗 UniProt Entry</a>
+                <a href="https://www.uniprot.org/uniprotkb/${uniprotId}/entry" target="_blank" style="color: #4ea8de; text-decoration: none;">🔗 View on UniProt</a>
             `;
 
             if (!viewer) {
@@ -172,7 +272,6 @@
                 viewer.clear();
             }
 
-            // Inject the script for the protein structure
             let script = document.createElement('script');
             script.src = jsPath;
             script.id = 'temp-pdb-script';
@@ -183,11 +282,9 @@
             document.body.appendChild(script);
         }
 
-        // Response function called by the .js structure files
         window.receivePDBData = function(uid, pdbData) {
             viewer.addModel(pdbData, "pdb");
             
-            // Apply AlphaFold confidence coloring
             let colorAlphaFold = function(atom) {
                 if(atom.b > 90) return '#0053d6'; 
                 if(atom.b > 70) return '#65cbf3'; 

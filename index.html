@@ -1,55 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Plasmodium falciparum Systems Biology</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plasmodium falciparum</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 50px; display: flex; flex-direction: column; align-items: center; }
-        h1 { font-size: 2.5em; margin-bottom: 10px; color: #fff; text-align: center; }
-        h1 i { color: #4ea8de; }
-        p.subtitle { color: #888; font-size: 1.2em; margin-bottom: 50px; text-align: center; max-width: 600px; line-height: 1.5; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #0a0a0a; 
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: 80px 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
         
-        .card-container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; max-width: 1200px; }
+        .header-container { 
+            text-align: center; 
+            margin-bottom: 70px; 
+        }
         
-        .card { background: #151515; border: 1px solid #333; border-radius: 12px; padding: 30px; width: 300px; text-align: center; transition: transform 0.2s, border-color 0.2s; text-decoration: none; display: block; }
-        .card:hover { transform: translateY(-5px); border-color: #4ea8de; }
+        h1 { 
+            font-size: 3.5em; 
+            margin: 0; 
+            color: #64b5f6; 
+            font-weight: normal; 
+            font-style: italic;
+        }
         
-        .card-icon { font-size: 3em; margin-bottom: 15px; }
-        .card-title { color: #fff; font-size: 1.5em; margin-bottom: 10px; font-weight: bold; }
-        .card-desc { color: #aaa; font-size: 0.95em; line-height: 1.4; }
+        h2 { 
+            font-size: 1.2em; 
+            margin: 15px 0 0 0; 
+            color: #777; 
+            font-weight: normal; 
+            letter-spacing: 2px; 
+            text-transform: uppercase;
+        }
+        
+        .card-container { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 25px; 
+            max-width: 1100px; 
+            width: 100%; 
+        }
+        
+        .card { 
+            background: #121212; 
+            border: 1px solid #2a2a2a; 
+            border-radius: 8px; 
+            padding: 40px 30px; 
+            text-align: center; 
+            transition: all 0.3s ease; 
+            text-decoration: none; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            min-height: 140px; 
+        }
+        
+        /* Centers the Spatial Atlas card on the row below the first three */
+        .card.spatial {
+            grid-column: 2;
+        }
+        
+        .card:hover { 
+            transform: translateY(-5px); 
+            border-color: #64b5f6; 
+            background: #181818; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
+        }
+        
+        .card-title { 
+            color: #fff; 
+            font-size: 1.4em; 
+            margin-bottom: 15px; 
+            font-weight: 600; 
+            letter-spacing: 0.5px; 
+        }
+        
+        .card-desc { 
+            color: #888; 
+            font-size: 0.95em; 
+            line-height: 1.6; 
+            margin: 0; 
+        }
 
-        /* Specific Highlights */
-        .card.proteome:hover { border-color: #4caf50; }
-        .card.genome:hover { border-color: #9c27b0; }
-        .card.interactome:hover { border-color: #ffd700; }
+        @media (max-width: 900px) {
+            .card-container { grid-template-columns: repeat(2, 1fr); }
+            .card.spatial { grid-column: auto; }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2.5em; }
+            body { padding: 40px 20px; }
+            .card-container { grid-template-columns: 1fr; }
+            .card.spatial { grid-column: auto; }
+        }
     </style>
 </head>
 <body>
 
-    <h1><i>Plasmodium falciparum</i> Multi-Omics Portal</h1>
-    <p class="subtitle">An interactive systems biology suite for exploring the genome, structural proteome, and drug-target interaction networks of the malaria parasite.</p>
+    <div class="header-container">
+        <h1>Plasmodium falciparum</h1>
+        <h2>By Jayanth Vegesna</h2>
+    </div>
 
     <div class="card-container">
         
-        <!-- Link to Genome Browser -->
-        <a href="genome.html" class="card genome">
-            <div class="card-icon">🧬</div>
-            <div class="card-title">Genome Browser</div>
-            <div class="card-desc">Navigate the parasite's chromosomes, explore annotations, and extract FASTA sequences dynamically.</div>
+        <!-- Genome -->
+        <a href="genome.html" class="card">
+            <div class="card-title">Genome</div>
+            <p class="card-desc">Navigate chromosomes, explore annotations, and extract genomic sequences.</p>
         </a>
 
-        <!-- Link to Proteome Viewer -->
-        <a href="proteome.html" class="card proteome">
-            <div class="card-icon">🔬</div>
-            <div class="card-title">Proteome Explorer</div>
-            <div class="card-desc">Search and visualize AlphaFold 3D structures for thousands of P. falciparum proteins.</div>
+        <!-- Proteome -->
+        <a href="proteome.html" class="card">
+            <div class="card-title">Proteome</div>
+            <p class="card-desc">Search and visualize protein structures in <i>P. falciparum</i>.</p>
         </a>
 
-        <!-- Link to Interactome -->
-        <a href="interactome.html" class="card interactome">
-            <div class="card-icon">🕸️</div>
-            <div class="card-title">Hemoglobin Interactome</div>
-            <div class="card-desc">Interactive physics network mapping the digestive vacuole, highlighting validated drug targets in gold.</div>
+        <!-- Interactome -->
+        <a href="interactome.html" class="card">
+            <div class="card-title">Interactome</div>
+            <p class="card-desc">Explore egocentric protein-protein interaction networks.</p>
+        </a>
+
+        <!-- Spatial Atlas (Centered) -->
+        <a href="spatial.html" class="card spatial">
+            <div class="card-title">Spatial Atlas</div>
+            <p class="card-desc">Map proteins directly to subcellular organelles.</p>
         </a>
 
     </div>
