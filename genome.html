@@ -11,20 +11,18 @@
         .dashboard-header { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
         .controls-wrapper { display: flex; flex-direction: column; gap: 15px; flex: 1; }
         
-        /* Updated layout to support top-left title area and right-aligned buttons */
         .controls { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; }
         
-        /* New Title Area locking the Back button above the Title */
         .title-area { display: flex; flex-direction: column; align-items: flex-start; }
         .title-area h2 { margin: 0; font-size: 1.5em; }
         
-        .action-group { display: flex; gap: 10px; align-items: center; }
+        .action-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         
         .back-btn { display: inline-block; background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.9em; margin-bottom: 10px; border: 1px solid #444; transition: all 0.2s; font-weight: bold; box-sizing: border-box; }
         .back-btn:hover { background: #333; color: #fff; border-color: #64b5f6; }
         
-        select, button { padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; font-size: 0.9em; box-sizing: border-box; }
-        select:focus, button:hover { border-color: #64b5f6; }
+        select, button, .upload-btn { padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; font-size: 0.9em; box-sizing: border-box; display: inline-block; }
+        select:focus, button:hover, .upload-btn:hover { border-color: #64b5f6; outline: none; }
         
         #legend { display: flex; gap: 15px; flex-wrap: wrap; background: #1e1e1e; padding: 12px 20px; border-radius: 8px; border: 1px solid #333; font-size: 0.9em; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
@@ -46,6 +44,29 @@
         .dna-text { fill: #121212; font-family: monospace; font-size: 12px; font-weight: bold; pointer-events: none; }
         .selection { fill: #64b5f6; fill-opacity: 0.3; stroke: #fff; }
 
+        .signal { transition: fill 0.2s, opacity 0.2s; cursor: crosshair; }
+
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 10px 14px;
+            font: 13px 'Segoe UI', sans-serif;
+            background: rgba(15, 15, 15, 0.85);
+            color: #fff;
+            border: 1px solid #64b5f6;
+            border-radius: 6px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.5);
+            line-height: 1.5;
+            min-width: 160px;
+        }
+
+        .clear-btn { background: #333; color: #ff6b6b; border-color: #ff6b6b; display: none; font-weight: bold; }
+        .clear-btn:hover { background: #ff6b6b; color: #121212; }
+
         @media (max-width: 900px) {
             .dashboard-header { flex-direction: column; }
             .info-panel { flex: none; width: auto; min-height: 100px; }
@@ -62,14 +83,37 @@
     <div class="dashboard-header">
         <div class="controls-wrapper">
             <div class="controls">
-                <!-- Matches the proteome layout: Back button top left -->
                 <div class="title-area">
                     <a href="index.html" class="back-btn">&larr; Back to Dashboard</a>
                     <h2><i>Plasmodium falciparum</i> Genome</h2>
                 </div>
                 
                 <div class="action-group">
-                    <select id="chrom-select"><option value="">Select a Chromosome...</option></select>
+                    <select id="chrom-select">
+                        <option value="">Select a Chromosome...</option>
+                    </select>
+                    
+                    <select id="feature-filter">
+                        <option value="all">Show All Features</option>
+                        <option value="CDS">CDS</option>
+                        <option value="five_prime_UTR">5' UTR</option>
+                        <option value="three_prime_UTR">3' UTR</option>
+                        <option value="intron">Introns</option>
+                        <option value="tRNA">tRNA</option>
+                        <option value="rRNA">rRNA</option>
+                        <option value="ncRNA">ncRNA</option>
+                        <option value="pseudogene">Pseudogene</option>
+                        <option value="var">var Genes</option>
+                        <option value="rifin">rifin Genes</option>
+                        <option value="stevor">stevor Genes</option>
+                    </select>
+
+                    <label class="upload-btn" id="upload-label" title="Expected BED Format (4 columns):&#10;chr | start | end | value">
+                        + Add BED Track
+                        <input type="file" id="bed-upload" accept=".bed" style="display: none;">
+                    </label>
+
+                    <button id="clear-tracks-btn" class="clear-btn" onclick="clearTracks()">Clear Tracks</button>
                     <button onclick="resetZoom()">Reset Zoom</button>
                 </div>
             </div>
@@ -81,6 +125,7 @@
     </div>
 
     <div id="browser-container">
+        <div id="tooltip" class="tooltip"></div>
         <svg id="genome-svg" width="100%" height="380"></svg>
     </div>
 
@@ -91,11 +136,23 @@
     <script src="GENOMIC/genome_data.js"></script>
 
     <script>
-        const colorScale = {"CDS": "#4caf50", "five_prime_UTR": "#00e5ff", "three_prime_UTR": "#2979ff", "intron": "#666666", "pseudogene": "#9e9e9e", "tRNA": "#ff9800", "rRNA": "#f44336"};
+        const colorScale = {
+            "CDS": "#4caf50", 
+            "five_prime_UTR": "#00e5ff", 
+            "three_prime_UTR": "#2979ff", 
+            "intron": "#666666", 
+            "pseudogene": "#9e9e9e", 
+            "tRNA": "#ff9800", 
+            "rRNA": "#ffeb3b", 
+            "ncRNA": "#ffffff"
+        };
         const familyColors = {"var": "#e91e63", "rifin": "#9c27b0", "stevor": "#d32f2f"}; 
         
-        const displayNames = {"five_prime_UTR": "5' UTR", "three_prime_UTR": "3' UTR", "var": "var", "rifin": "rifin", "stevor": "stevor"};
+        const displayNames = {"five_prime_UTR": "5' UTR", "three_prime_UTR": "3' UTR", "var": "var", "rifin": "rifin", "stevor": "stevor", "ncRNA": "ncRNA"};
         const getDisplayName = (t) => displayNames[t] || t;
+
+        let customTracks = []; 
+        const tooltip = d3.select("#tooltip");
 
         function formatChromosomeName(rawName) {
             const match = rawName.match(/Pf3D7_(\d+)_v3/i);
@@ -111,7 +168,7 @@
 
         const legendDiv = document.getElementById("legend");
         for (const [type, color] of Object.entries(colorScale)) {
-            legendDiv.innerHTML += `<div class="legend-item"><div class="legend-box" style="background: ${color};"></div><span>${getDisplayName(type)}</span></div>`;
+            legendDiv.innerHTML += `<div class="legend-item"><div class="legend-box" style="background: ${color}; border: ${color === '#ffffff' ? '1px solid #555' : 'none'};"></div><span>${getDisplayName(type)}</span></div>`;
         }
         for (const [fam, color] of Object.entries(familyColors)) {
             legendDiv.innerHTML += `<div class="legend-item"><div class="legend-box" style="background: ${color};"></div><span>${getDisplayName(fam)}</span></div>`;
@@ -155,7 +212,100 @@
                     clearPanels();
                 }
             });
+
+            document.getElementById('feature-filter').addEventListener('change', function() {
+                const chrom = document.getElementById('chrom-select').value;
+                if(chrom) {
+                    drawBrowser(chrom);
+                }
+            });
+
+            // Cross-linking: Check URL for ?gene=ID parameter to auto-zoom
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetGene = urlParams.get('gene');
+
+            if (targetGene) {
+                let foundChrom = null;
+                let targetFeature = null;
+
+                for (const chrom in window.GenomeData) {
+                    const feature = window.GenomeData[chrom].find(f => f.name.includes(targetGene) || (f.id && f.id.includes(targetGene)));
+                    if (feature) {
+                        foundChrom = chrom;
+                        targetFeature = feature;
+                        break;
+                    }
+                }
+
+                if (foundChrom && targetFeature) {
+                    chromSelect.value = foundChrom;
+                    drawBrowser(foundChrom);
+                    
+                    const zoomWindow = 2000; 
+                    setTimeout(() => {
+                        const targetScale = width / zoomWindow;
+                        const targetX = -(targetFeature.start - zoomWindow/2) * targetScale;
+                        globalSvg.transition().duration(1000).call(
+                            globalZoom.transform, 
+                            d3.zoomIdentity.translate(targetX, 0).scale(targetScale)
+                        );
+                    }, 500); 
+                }
+            }
+
+            document.getElementById('bed-upload').addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const trackName = file.name;
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    let trackData = {};
+                    let trackMaxSignal = 0;
+                    
+                    const lines = e.target.result.split('\n');
+                    for (let line of lines) {
+                        if (line.trim() === '' || line.startsWith('#') || line.startsWith('track') || line.startsWith('browser')) continue;
+                        
+                        const parts = line.trim().split(/\s+/);
+                        if (parts.length >= 4) {
+                            const chr = parts[0];
+                            const start = parseInt(parts[1], 10);
+                            const end = parseInt(parts[2], 10);
+                            const signal = parseFloat(parts[3]);
+                            
+                            if (!isNaN(start) && !isNaN(end) && !isNaN(signal)) {
+                                if (!trackData[chr]) trackData[chr] = [];
+                                trackData[chr].push({chr, start, end, signal});
+                                if (signal > trackMaxSignal) trackMaxSignal = signal;
+                            }
+                        }
+                    }
+                    
+                    customTracks.push({
+                        name: trackName,
+                        data: trackData,
+                        maxSignal: trackMaxSignal
+                    });
+                    
+                    document.getElementById('clear-tracks-btn').style.display = 'inline-block';
+                    
+                    const chrom = document.getElementById('chrom-select').value;
+                    if (chrom) drawBrowser(chrom);
+                    
+                    event.target.value = '';
+                };
+                reader.readAsText(file);
+            });
         };
+
+        window.clearTracks = function() {
+            customTracks = [];
+            document.getElementById('clear-tracks-btn').style.display = 'none';
+            const chrom = document.getElementById('chrom-select').value;
+            if (chrom) drawBrowser(chrom);
+        }
 
         function getFeatureStyles(d, isY) {
             let base_y = d.strand === "+" ? 20 : 100; 
@@ -178,10 +328,22 @@
 
         function drawBrowser(chrom) {
             svg.selectAll("*").remove(); 
-            const features = window.GenomeData[chrom];
+            
+            let allFeatures = window.GenomeData[chrom];
+            const activeFilter = document.getElementById('feature-filter').value;
+            
+            let features = allFeatures;
+            if (activeFilter !== "all") {
+                features = allFeatures.filter(d => d.type === activeFilter || d.family === activeFilter);
+            }
+
             const maxLen = window.ChromosomeLengths[chrom];
             const infoPanel = document.getElementById("info-panel");
             const sequencePanel = document.getElementById("sequence-panel");
+            
+            const baseSvgHeight = 380;
+            const trackHeightOffset = 120;
+            svg.attr("height", baseSvgHeight + (customTracks.length * trackHeightOffset));
 
             let selectedFeature = null;
 
@@ -227,7 +389,7 @@
             const featureGroup = mainGroup.append("g").attr("clip-path", "url(#clip)");
             const textGroup = mainGroup.append("g").attr("clip-path", "url(#clip)"); 
 
-            const rects = featureGroup.selectAll("rect").data(features).enter().append("rect")
+            const rects = featureGroup.selectAll("rect.feature").data(features).enter().append("rect")
                 .attr("class", "feature")
                 .attr("fill", d => getFeatureColor(d)) 
                 .attr("x", d => xScaleMain(d.start))
@@ -238,7 +400,6 @@
                 .text(d => `${d.name} (${d.type})`)
                 .select(function() { return this.parentNode; }) 
                 .on("click", function(event, d) {
-                    
                     if (selectedFeature === d) {
                         clearPanels();
                         selectedFeature = null;
@@ -254,6 +415,12 @@
                     
                     let familyText = d.family ? `<br><b>Family:</b> <span style="color:${color}; font-weight:bold;">${d.family}</span>` : "";
 
+                    // Add link to 3D structure only for CDS/Genes
+                    let structureLink = "";
+                    if (d.type === "CDS" || d.type === "gene" || d.type === "mRNA") {
+                        structureLink = `<div style="margin-top: 15px;"><a href="proteome.html?search=${d.name}" target="_blank" style="display: inline-block; background: #64b5f6; color: #121212; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; transition: 0.2s;">🔬 View 3D Structure</a></div>`;
+                    }
+
                     infoPanel.innerHTML = `
                         <div style="color: ${color}; font-weight: bold; font-size: 1.3em; border-bottom: 1px solid #333; padding-bottom: 5px;">${displayType.toUpperCase()}</div>
                         <div style="margin-top: 10px; font-size: 1.05em; line-height:1.5;">
@@ -261,8 +428,58 @@
                             ${familyText}
                             <br><b>Range:</b> ${d.start.toLocaleString()} - ${d.end.toLocaleString()}
                         </div>
+                        ${structureLink}
                     `;
                 });
+
+            // Handle Multiple Custom Uploaded Tracks & Fixed Tooltips
+            let allTrackRects = [];
+            
+            if (customTracks.length > 0) {
+                customTracks.forEach((track, index) => {
+                    const trackData = track.data[chrom] || [];
+                    if (trackData.length === 0) return; 
+                    
+                    const startY = 350 + (index * trackHeightOffset);
+                    const trackGroup = svg.append("g").attr("transform", `translate(0, ${startY})`);
+                    
+                    trackGroup.append("text").attr("class", "track-title").attr("x", margin.left).attr("y", -10).text(`Track: ${track.name}`);
+
+                    const trackDrawHeight = 80;
+                    const yScaleSignal = d3.scaleLinear().domain([0, track.maxSignal || 1]).range([trackDrawHeight, 0]);
+
+                    const clipId = `clip-track-${index}`;
+                    svg.append("clipPath").attr("id", clipId).append("rect").attr("width", width - margin.left - margin.right).attr("height", trackDrawHeight + 20).attr("x", margin.left).attr("y", -10);
+                    
+                    const trackContent = trackGroup.append("g").attr("clip-path", `url(#${clipId})`);
+
+                    trackGroup.append("line").attr("x1", margin.left).attr("x2", width - margin.right).attr("y1", trackDrawHeight).attr("y2", trackDrawHeight).attr("stroke", "#333");
+
+                    const trackRects = trackContent.selectAll("rect.signal").data(trackData).enter().append("rect")
+                        .attr("class", "signal")
+                        .attr("fill", "#64b5f6")
+                        .attr("opacity", 0.8)
+                        .attr("x", d => xScaleMain(d.start))
+                        .attr("y", d => yScaleSignal(d.signal))
+                        .attr("width", d => Math.max(1, xScaleMain(d.end) - xScaleMain(d.start)))
+                        .attr("height", d => trackDrawHeight - yScaleSignal(d.signal))
+                        
+                        .on("mouseover", function(event, d) {
+                            d3.select(this).attr("fill", "#ff9800").attr("opacity", 1);
+                            tooltip.transition().duration(200).style("opacity", 1);
+                            tooltip.html(`<b>Chr:</b> ${d.chr}<br><b>Range:</b> ${d.start.toLocaleString()} - ${d.end.toLocaleString()}<br><b>Value:</b> <span style="color:#ff9800;font-weight:bold;">${d.signal}</span>`)
+                                   .style("right", "40px")
+                                   .style("left", "auto")
+                                   .style("top", (startY + 30) + "px"); 
+                        })
+                        .on("mouseout", function(event, d) {
+                            d3.select(this).attr("fill", "#64b5f6").attr("opacity", 0.8);
+                            tooltip.transition().duration(400).style("opacity", 0);
+                        });
+
+                    allTrackRects.push(trackRects);
+                });
+            }
 
             globalZoom = d3.zoom().scaleExtent([1, 100000])
                 .translateExtent([[margin.left, 0], [width - margin.right, 0]])
@@ -293,6 +510,13 @@
                 xAxisGroup.call(xAxisMain.scale(newX));
                 rects.attr("x", d => newX(d.start))
                      .attr("width", d => Math.max(1.5, newX(d.end) - newX(d.start)));
+                
+                if (allTrackRects.length > 0) {
+                    allTrackRects.forEach(rectsGroup => {
+                        rectsGroup.attr("x", d => newX(d.start))
+                                  .attr("width", d => Math.max(1, newX(d.end) - newX(d.start)));
+                    });
+                }
                 
                 textGroup.selectAll("text").remove();
                 if (transform.k > 20000) { 
