@@ -50,12 +50,12 @@
         .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 80%; max-width: 900px; height: 80%; display: flex; flex-direction: column; position: relative; border: 1px solid #444; }
         .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; padding-right: 40px; }
         .modal-title { margin: 0; color: #fff; font-size: 1.5em; }
-        .modal-meta-container { margin-top: 8px; font-size: 0.95em; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .modal-meta-container { margin-top: 10px; font-size: 0.95em; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
         
         .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: #aaa; font-size: 2em; cursor: pointer; line-height: 1; padding: 5px; transition: color 0.2s; z-index: 10; }
         .close-btn:hover { color: #fff; }
         
-        #viewer_div { flex-grow: 1; background: #121212; border-radius: 8px; position: relative; margin-top: 10px; }
+        #viewer_div { flex-grow: 1; background: #121212; border-radius: 8px; position: relative; margin-top: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .loading-text { color: #64b5f6; font-weight: bold; margin-top: 10px; }
 
         #sentinel { height: 50px; width: 100%; margin-top: 20px; }
@@ -225,16 +225,33 @@
             if(plasmodbId) displayTitle = uniprotId + " (" + plasmodbId + ") - " + proteinName;
             document.getElementById('modal-title').innerText = displayTitle;
             
-            let quality = "Very Low (Disordered)";
+            let quality = "Very Low"; // "Disordered" tag removed
             let scoreColor = "#ff9800"; 
             if (plddtScore >= 90) { quality = "Very High"; scoreColor = "#4caf50"; } 
             else if (plddtScore >= 70) { quality = "Confident"; scoreColor = "#65cbf3"; } 
             else if (plddtScore >= 50) { quality = "Low"; scoreColor = "#ffdb13"; }
 
-            document.getElementById('modal-meta').innerHTML = `
-                <span style="color: ${scoreColor}; font-weight: bold;">Average pLDDT: ${plddtScore} (${quality})</span>
+            // Dynamically build the extra links
+            let extraLinks = "";
+            if (plasmodbId) {
+                extraLinks += `
+                    <span style="margin: 0 5px; color: #555;">|</span>
+                    <a href="https://plasmodb.org/plasmo/app/record/gene/${plasmodbId}" target="_blank" style="color: #64b5f6; text-decoration: none;">🔗 View on PlasmoDB</a>
+                `;
+            }
+            
+            // Add the Genome Browser Button
+            let searchId = plasmodbId ? plasmodbId : uniprotId;
+            extraLinks += `
                 <span style="margin: 0 10px; color: #555;">|</span>
+                <a href="genome.html?search=${searchId}" target="_blank" style="display: inline-block; background: #64b5f6; color: #121212; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: 0.2s;">🧬 View in Genome Browser</a>
+            `;
+
+            document.getElementById('modal-meta').innerHTML = `
+                <span style="color: ${scoreColor}; font-weight: bold;">Avg pLDDT: ${plddtScore} (${quality})</span>
+                <span style="margin: 0 5px; color: #555;">|</span>
                 <a href="https://www.uniprot.org/uniprotkb/${uniprotId}/entry" target="_blank" style="color: #64b5f6; text-decoration: none;">🔗 View on UniProt</a>
+                ${extraLinks}
             `;
 
             document.getElementById('status').innerText = "Loading structure data...";
@@ -283,6 +300,15 @@
             if (incomingSearch) {
                 document.getElementById('search').value = incomingSearch;
                 applyFilter();
+                
+                // If there's exactly 1 hit from the external link, auto-open the 3D viewer
+                setTimeout(() => {
+                    if (filteredData.length === 1) {
+                        const item = filteredData[0];
+                        let safeName = item.name.replace(/'/g, "\\'");
+                        openViewer(item.js_file, item.id, safeName, item.score, item.plasmodb);
+                    }
+                }, 300);
             } else {
                 renderChunk();
             }

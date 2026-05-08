@@ -220,16 +220,22 @@
                 }
             });
 
-            // Cross-linking: Check URL for ?gene=ID parameter to auto-zoom
+            // ==========================================
+            // CORRECTED CROSS-LINKING LOGIC
+            // ==========================================
             const urlParams = new URLSearchParams(window.location.search);
-            const targetGene = urlParams.get('gene');
+            const targetGene = urlParams.get('search') || urlParams.get('gene');
 
             if (targetGene) {
                 let foundChrom = null;
                 let targetFeature = null;
 
+                const searchLower = targetGene.toLowerCase();
                 for (const chrom in window.GenomeData) {
-                    const feature = window.GenomeData[chrom].find(f => f.name.includes(targetGene) || (f.id && f.id.includes(targetGene)));
+                    const feature = window.GenomeData[chrom].find(f => 
+                        (f.name && f.name.toLowerCase().includes(searchLower)) || 
+                        (f.id && f.id.toLowerCase().includes(searchLower))
+                    );
                     if (feature) {
                         foundChrom = chrom;
                         targetFeature = feature;
@@ -241,17 +247,41 @@
                     chromSelect.value = foundChrom;
                     drawBrowser(foundChrom);
                     
-                    const zoomWindow = 2000; 
                     setTimeout(() => {
-                        const targetScale = width / zoomWindow;
-                        const targetX = -(targetFeature.start - zoomWindow/2) * targetScale;
-                        globalSvg.transition().duration(1000).call(
+                        // 1. Get chromosome total length to calculate proper zoom multiplier
+                        const maxLen = window.ChromosomeLengths[foundChrom];
+                        
+                        // 2. Set viewing window to 15,000 base pairs
+                        const zoomWindow = 15000; 
+                        
+                        // 3. D3 Zoom 'k' is a multiplier of the total chromosome length
+                        const targetScale = maxLen / zoomWindow;
+                        
+                        // 4. Calculate coordinates to center the gene
+                        const geneCenter = targetFeature.start + (targetFeature.end - targetFeature.start) / 2;
+                        const originalPixelX = margin.left + (geneCenter / maxLen) * (width - margin.left - margin.right);
+                        const targetX = (width / 2) - (originalPixelX * targetScale);
+                        
+                        // 5. Perform smooth zoom animation
+                        globalSvg.transition().duration(1200).call(
                             globalZoom.transform, 
                             d3.zoomIdentity.translate(targetX, 0).scale(targetScale)
-                        );
-                    }, 500); 
+                        ).on("end", () => {
+                            // 6. Click the rectangle to show metadata
+                            globalSvg.selectAll("rect.feature")
+                                .filter(d => d === targetFeature)
+                                .dispatch("click");
+                        });
+
+                        // Clean up URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        
+                    }, 400); 
+                } else {
+                    console.warn(`Target gene '${targetGene}' could not be located in the dataset.`);
                 }
             }
+            // ==========================================
 
             document.getElementById('bed-upload').addEventListener('change', function(event) {
                 const file = event.target.files[0];
@@ -415,7 +445,6 @@
                     
                     let familyText = d.family ? `<br><b>Family:</b> <span style="color:${color}; font-weight:bold;">${d.family}</span>` : "";
 
-                    // Add link to 3D structure only for CDS/Genes
                     let structureLink = "";
                     if (d.type === "CDS" || d.type === "gene" || d.type === "mRNA") {
                         structureLink = `<div style="margin-top: 15px;"><a href="proteome.html?search=${d.name}" target="_blank" style="display: inline-block; background: #64b5f6; color: #121212; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; transition: 0.2s;">🔬 View 3D Structure</a></div>`;
@@ -432,7 +461,6 @@
                     `;
                 });
 
-            // Handle Multiple Custom Uploaded Tracks & Fixed Tooltips
             let allTrackRects = [];
             
             if (customTracks.length > 0) {

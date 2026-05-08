@@ -38,9 +38,11 @@
             text-transform: uppercase;
         }
         
+        /* Converted to Flexbox for automatic bottom-row centering */
         .card-container { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
             gap: 25px; 
             max-width: 1100px; 
             width: 100%; 
@@ -58,11 +60,9 @@
             flex-direction: column; 
             justify-content: center; 
             min-height: 140px; 
-        }
-        
-        /* Centers the Spatial Atlas card on the row below the first three */
-        .card.spatial {
-            grid-column: 2;
+            width: 100%;
+            max-width: 320px; /* Limits size so exactly 3 fit on the top row */
+            box-sizing: border-box;
         }
         
         .card:hover { 
@@ -87,16 +87,9 @@
             margin: 0; 
         }
 
-        @media (max-width: 900px) {
-            .card-container { grid-template-columns: repeat(2, 1fr); }
-            .card.spatial { grid-column: auto; }
-        }
-
         @media (max-width: 600px) {
             h1 { font-size: 2.5em; }
             body { padding: 40px 20px; }
-            .card-container { grid-template-columns: 1fr; }
-            .card.spatial { grid-column: auto; }
         }
     </style>
 </head>
@@ -109,28 +102,29 @@
 
     <div class="card-container">
         
-        <!-- Genome -->
         <a href="genome.html" class="card">
             <div class="card-title">Genome</div>
             <p class="card-desc">Navigate chromosomes, explore annotations, and extract genomic sequences.</p>
         </a>
 
-        <!-- Proteome -->
         <a href="proteome.html" class="card">
             <div class="card-title">Proteome</div>
             <p class="card-desc">Search and visualize protein structures in <i>P. falciparum</i>.</p>
         </a>
 
-        <!-- Interactome -->
         <a href="interactome.html" class="card">
             <div class="card-title">Interactome</div>
             <p class="card-desc">Explore egocentric protein-protein interaction networks.</p>
         </a>
 
-        <!-- Spatial Atlas (Centered) -->
-        <a href="spatial.html" class="card spatial">
+        <a href="spatial.html" class="card">
             <div class="card-title">Spatial Atlas</div>
             <p class="card-desc">Map proteins directly to subcellular organelles.</p>
+        </a>
+
+        <a href="ontology.html" class="card">
+            <div class="card-title">Gene Ontology</div>
+            <p class="card-desc">Explore biological processes, molecular functions, and cellular components.</p>
         </a>
 
     </div>
