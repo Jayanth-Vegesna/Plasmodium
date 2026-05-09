@@ -17,6 +17,9 @@
         .back-btn { display: inline-block; background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.9em; margin-bottom: 15px; border: 1px solid #444; transition: all 0.2s; font-weight: bold; align-self: flex-start; }
         .back-btn:hover { background: #333; color: #fff; border-color: #64b5f6; }
         
+        #searchInput { width: 100%; padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; outline: none; margin-top: 10px; margin-bottom: 10px; transition: border-color 0.2s; }
+        #searchInput:focus { border-color: #64b5f6; }
+
         .map-container { flex: 1.5; min-width: 400px; background: #151515; border-radius: 8px; border: 1px solid #333; padding: 10px; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
         
         svg { width: 100%; height: 100%; display: block; }
@@ -37,7 +40,7 @@
         svg.filtering .organelle.active ~ .leader-line,
         svg.filtering .organelle.active ~ .svg-label { fill: #64b5f6; stroke: #64b5f6; }
 
-        .reset-filter { margin-top: 15px; padding: 12px; width: 100%; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; display: none; font-weight: bold; transition: 0.2s; }
+        .reset-filter { margin-top: 5px; padding: 12px; width: 100%; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; display: none; font-weight: bold; transition: 0.2s; }
         .reset-filter:hover { background: #333; border-color: #64b5f6; }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
@@ -77,13 +80,14 @@
             <div class="title-area">
                 <a href="index.html" class="back-btn">&larr; Back to Dashboard</a>
                 <h1>Spatial Cell Atlas</h1>
-                <p>Click on an organelle within the parasite diagram to instantly filter the structural database by subcellular localization. Click the empty background for uncharacterized proteins.</p>
+                <p>Filter by subcellular localization using the diagram, or search directly for a protein ID or name below.</p>
             </div>
             
             <div>
-                <h2 id="current-view" style="color: #64b5f6; margin-top: 20px; margin-bottom: 5px;">Showing: All Proteins</h2>
+                <h2 id="current-view" style="color: #64b5f6; margin-top: 10px; margin-bottom: 5px;">Showing: All Proteins</h2>
                 <p id="hit-counter" style="color: #aaa; font-weight: bold; margin-top: 0;">Loading Structures...</p>
-                <button id="reset-btn" class="reset-filter" onclick="resetFilter()">View All Proteins</button>
+                <input type="text" id="searchInput" placeholder="Search protein ID or name..." autocomplete="off">
+                <button id="reset-btn" class="reset-filter" onclick="resetFilter()">Clear Location Filter</button>
             </div>
         </div>
         
@@ -179,8 +183,41 @@
         let filteredData = [...allData];
         let currentIndex = 0;
         const CHUNK_SIZE = 50;
+        
+        let currentLocFilter = null;
+        let currentClickedEl = null;
 
         document.getElementById('hit-counter').innerText = allData.length + " Structures Available";
+
+        // Listen for Search Input
+        document.getElementById('searchInput').addEventListener('input', () => {
+            applyFilters();
+        });
+
+        // Combined Filter Engine
+        function applyFilters() {
+            let query = (document.getElementById('searchInput').value || "").toLowerCase();
+            
+            filteredData = allData.filter(d => {
+                let locMatch = true;
+                if (currentLocFilter) {
+                    locMatch = (d.location === currentLocFilter || (currentClickedEl && currentClickedEl.getAttribute('data-loc2') === d.location));
+                }
+                
+                let searchMatch = true;
+                if (query) {
+                    let searchStr = (d.id + " " + (d.name || "") + " " + (d.plasmodb || "")).toLowerCase();
+                    searchMatch = searchStr.includes(query);
+                }
+                
+                return locMatch && searchMatch;
+            });
+            
+            document.getElementById('hit-counter').innerText = filteredData.length + " Structures Available";
+            document.getElementById('proteinGrid').innerHTML = "";
+            currentIndex = 0;
+            renderChunk();
+        }
 
         function renderChunk() {
             const chunk = filteredData.slice(currentIndex, currentIndex + CHUNK_SIZE);
@@ -220,19 +257,14 @@
             document.getElementById('parasite-svg').classList.add('filtering');
             document.querySelectorAll('.organelle, .organelle-bg').forEach(el => el.classList.remove('active'));
             
-            let clickedEl = Array.from(document.querySelectorAll('.organelle, .organelle-bg')).find(el => el.getAttribute('data-loc') === loc || (loc === 'Unknown / Uncharacterized' && el.id === 'bg-catcher'));
-            if(clickedEl) clickedEl.classList.add('active');
+            currentClickedEl = Array.from(document.querySelectorAll('.organelle, .organelle-bg')).find(el => el.getAttribute('data-loc') === loc || (loc === 'Unknown / Uncharacterized' && el.id === 'bg-catcher'));
+            if(currentClickedEl) currentClickedEl.classList.add('active');
 
             document.getElementById('reset-btn').style.display = 'block';
             document.getElementById('current-view').innerText = "Showing: " + loc;
 
-            filteredData = allData.filter(d => d.location === loc || (clickedEl && clickedEl.getAttribute('data-loc2') === d.location));
-            
-            document.getElementById('hit-counter').innerText = filteredData.length + " Structures Available";
-            
-            document.getElementById('proteinGrid').innerHTML = "";
-            currentIndex = 0;
-            renderChunk();
+            currentLocFilter = loc;
+            applyFilters();
         }
 
         function resetFilter() {
@@ -240,12 +272,10 @@
             document.querySelectorAll('.organelle, .organelle-bg').forEach(el => el.classList.remove('active'));
             document.getElementById('reset-btn').style.display = 'none';
             document.getElementById('current-view').innerText = "Showing: All Proteins";
-            document.getElementById('hit-counter').innerText = allData.length + " Structures Available";
             
-            filteredData = [...allData];
-            document.getElementById('proteinGrid').innerHTML = "";
-            currentIndex = 0;
-            renderChunk();
+            currentLocFilter = null;
+            currentClickedEl = null;
+            applyFilters();
         }
 
         let viewer = null;

@@ -9,112 +9,70 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         
         .controls { 
-            background: #1e1e1e; 
-            padding: 12px 25px; 
-            border-bottom: 1px solid #333; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            background: #1e1e1e; padding: 12px 25px; border-bottom: 1px solid #333; 
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); flex-wrap: wrap; gap: 15px;
         }
 
         .left-group { display: flex; align-items: center; gap: 20px; }
         .title-area h2 { margin: 0; color: #ffffff; font-size: 1.3em; }
         
-        .back-btn { 
-            background: #2a2a2a; 
-            color: #aaa; 
-            text-decoration: none; 
-            padding: 8px 15px; 
-            border-radius: 6px; 
-            font-size: 0.85em; 
-            border: 1px solid #444; 
-            transition: 0.2s; 
-            font-weight: bold; 
-        }
+        .back-btn { background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.85em; border: 1px solid #444; transition: 0.2s; font-weight: bold; }
         .back-btn:hover { background: #333; color: #fff; border-color: #64b5f6; }
+
+        /* Toggle Switch */
+        .toggle-group { display: flex; background: #0a0a0a; border-radius: 8px; border: 1px solid #444; overflow: hidden; }
+        .toggle-btn { background: transparent; color: #aaa; border: none; padding: 8px 15px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.85em; }
+        .toggle-btn.active { background: #333; color: #fff; }
+        .toggle-btn#btn-explore.active { border-bottom: 3px solid #64b5f6; }
+        .toggle-btn#btn-network.active { border-bottom: 3px solid #ff9800; }
 
         .filter-area { display: flex; align-items: center; gap: 15px; }
         input[type="text"], select {
-            padding: 8px 12px;
-            background: #2a2a2a;
-            color: #fff;
-            border: 1px solid #444;
-            border-radius: 6px;
-            outline: none;
-            cursor: pointer;
-            font-size: 0.9em;
+            padding: 8px 12px; background: #2a2a2a; color: #fff; border: 1px solid #444;
+            border-radius: 6px; outline: none; cursor: pointer; font-size: 0.9em;
         }
-        input[type="text"] { width: 200px; cursor: text; }
+        input[type="text"] { width: 220px; cursor: text; }
         input[type="text"]:focus, select:hover { border-color: #64b5f6; }
 
         #main-container { position: relative; flex-grow: 1; display: flex; overflow: hidden; }
         #viz-container { flex-grow: 1; position: relative; background: #0f0f0f; cursor: grab; }
         #viz-container:active { cursor: grabbing; }
         
-        /* Fixed Sidebar Styling */
         #gene-sidebar {
-            width: 350px;
-            background: #1a1a1a;
-            border-left: 1px solid #333;
-            display: flex; /* Always visible to hold placeholder */
-            flex-direction: column;
-            flex-shrink: 0;
-            z-index: 500;
+            width: 380px; background: #1a1a1a; border-left: 1px solid #333;
+            display: flex; flex-direction: column; flex-shrink: 0; z-index: 500;
             box-shadow: -5px 0 15px rgba(0,0,0,0.5);
         }
 
-        /* Solid background padding moved here so scrolling genes don't overlap text */
-        .sidebar-header { 
-            position: sticky; 
-            top: 0; 
-            background: #1a1a1a; 
-            padding: 20px 20px 15px 20px; 
-            border-bottom: 1px solid #333; 
-            z-index: 10;
-        }
-        .sidebar-content {
-            padding: 15px 20px 20px 20px;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
+        .sidebar-header { position: sticky; top: 0; background: #1a1a1a; padding: 20px; border-bottom: 1px solid #333; z-index: 10; }
+        .sidebar-content { padding: 15px 20px; overflow-y: auto; flex-grow: 1; }
 
         .sidebar-title { color: #64b5f6; font-size: 1.2em; font-weight: bold; margin-bottom: 5px; line-height: 1.3; }
         .gene-count-label { color: #888; font-size: 0.85em; display: block; }
         .panel-placeholder { color: #666; font-style: italic; text-align: center; margin-top: 50px; line-height: 1.5; }
         
-        /* Upgraded Gene Cards */
-        .gene-card { 
-            display: block; 
-            background: #252525; 
-            padding: 12px; 
-            margin-bottom: 10px; 
-            border-radius: 6px; 
-            text-decoration: none; 
-            border: 1px solid #333; 
-            transition: all 0.2s; 
-        }
-        .gene-card:hover { background: #303030; border-color: #64b5f6; transform: translateY(-2px); }
-        .gene-id { color: #64b5f6; font-family: monospace; font-weight: bold; font-size: 1.1em; display: block; }
-        .gene-name { color: #e0e0e0; font-size: 0.85em; display: block; margin-top: 6px; line-height: 1.4; }
+        .item-card { display: block; background: #252525; padding: 12px; margin-bottom: 10px; border-radius: 6px; text-decoration: none; border: 1px solid #333; transition: all 0.2s; }
+        .item-card:hover { background: #303030; border-color: #64b5f6; transform: translateY(-2px); }
+        .item-id { color: #64b5f6; font-family: monospace; font-weight: bold; font-size: 1.1em; display: block; }
+        .item-name { color: #e0e0e0; font-size: 0.85em; display: block; margin-top: 6px; line-height: 1.4; }
+        
+        /* Categories in Sidebar */
+        .cat-header { font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; margin: 15px 0 5px 0; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 3px; }
+        .cat-bp { color: #4caf50; border-bottom-color: #4caf50; }
+        .cat-mf { color: #64b5f6; border-bottom-color: #64b5f6; }
+        .cat-cc { color: #e91e63; border-bottom-color: #e91e63; }
 
+        /* D3 Nodes and Links */
         .node { cursor: pointer; stroke-width: 1px; transition: stroke 0.2s, fill-opacity 0.2s; }
         .node:hover { fill-opacity: 1 !important; stroke: #ffffff !important; stroke-width: 2px; }
+        .link { stroke: #555; stroke-opacity: 0.6; stroke-width: 2px; }
+        .node-label { font-family: sans-serif; font-size: 12px; fill: #e0e0e0; pointer-events: none; text-shadow: 0px 2px 4px #000; font-weight: bold; }
         
         #tooltip {
-            position: absolute;
-            background: rgba(10, 10, 10, 0.95);
-            padding: 12px;
-            border: 1px solid #64b5f6;
-            border-radius: 6px;
-            pointer-events: none;
-            display: none;
-            z-index: 2000;
-            font-size: 0.9em;
-            backdrop-filter: blur(4px);
-            color: #fff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            position: absolute; background: rgba(10, 10, 10, 0.95); padding: 12px; border: 1px solid #64b5f6;
+            border-radius: 6px; pointer-events: none; display: none; z-index: 2000; font-size: 0.9em;
+            backdrop-filter: blur(4px); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         ::-webkit-scrollbar { width: 8px; }
@@ -132,20 +90,28 @@
             </div>
         </div>
         
-        <div class="filter-area">
+        <div class="toggle-group">
+            <button id="btn-explore" class="toggle-btn active" onclick="setMode('explore')">Explore Categories</button>
+            <button id="btn-network" class="toggle-btn" onclick="setMode('network')">Gene Search Network</button>
+        </div>
+
+        <div class="filter-area" id="control-explore">
             <div>
-                <label for="term-search" style="margin-right: 5px; font-size: 0.9em; color: #888;">Search Term:</label>
-                <input type="text" id="term-search" list="term-options" placeholder="Select or type GO term...">
+                <input type="text" id="term-search" list="term-options" placeholder="Search GO term...">
                 <datalist id="term-options"></datalist>
             </div>
-            <div style="margin-left: 10px;">
-                <label for="category-filter" style="margin-right: 5px; font-size: 0.9em; color: #888;">Ontology:</label>
+            <div>
                 <select id="category-filter">
                     <option value="Biological Process" selected>Biological Process</option>
                     <option value="Molecular Function">Molecular Function</option>
                     <option value="Cellular Component">Cellular Component</option>
                 </select>
             </div>
+        </div>
+
+        <div class="filter-area" id="control-network" style="display: none;">
+            <input type="text" id="gene-search" list="gene-options" placeholder="Search ID or Name...">
+            <datalist id="gene-options"></datalist>
         </div>
     </div>
 
@@ -157,186 +123,328 @@
         <div id="gene-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-title" id="sidebar-term">GO Term Details</div>
-                <span class="gene-count-label" id="gene-count">No term selected</span>
+                <span class="gene-count-label" id="sidebar-subtitle">No item selected</span>
             </div>
             
             <div class="sidebar-content">
                 <div id="placeholder-text" class="panel-placeholder">
-                    Click a bubble or use the search bar to explore the genes in a specific ontology term.
+                    Select a mode and search to begin exploring the ontology.
                 </div>
-                <div id="gene-list"></div>
+                <div id="sidebar-list"></div>
             </div>
         </div>
     </div>
 
     <script src="GENOMIC/go_data.js"></script>
     <script>
+        // Global variables
+        const colors = { "Biological Process": "#4caf50", "Molecular Function": "#64b5f6", "Cellular Component": "#e91e63" };
+        let currentMode = 'explore';
+        let geneIndex = new Map(); // Reverse lookup: Gene -> GO Terms
+        let simulation;
+
         document.addEventListener("DOMContentLoaded", function() {
             const container = document.getElementById('viz-container');
             if (!window.GOData) {
-                container.innerHTML = "<h3 style='color:red; text-align:center; padding:50px;'>Error: GENOMIC/go_data.js not found. Run make_ontology.py first.</h3>";
+                container.innerHTML = "<h3 style='color:red; text-align:center; padding:50px;'>Error: Data not found. Run make_ontology.py first.</h3>";
                 return;
             }
 
-            const width = container.clientWidth;
-            const height = container.clientHeight;
+            // --- Build Reverse Index (Gene -> GO Terms) ---
+            window.GOData.forEach(term => {
+                term.genes.forEach(g => {
+                    if (!geneIndex.has(g.id)) {
+                        geneIndex.set(g.id, { id: g.id, name: g.name, terms: [] });
+                    }
+                    geneIndex.get(g.id).terms.push({ name: term.name, category: term.category, value: term.value });
+                });
+            });
 
-            // EXACT INITIALIZATION LOGIC FROM WORKING SCRIPT
-            const svg = d3.select("#viz-container").append("svg")
-                .attr("width", width)
-                .attr("height", height)
+            // Populate Gene Datalist with both ID and Name
+            const geneListEl = document.getElementById('gene-options');
+            geneIndex.forEach((data, id) => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.innerText = data.name || "Unknown Product"; // Most browsers will search/display this text too
+                geneListEl.appendChild(opt);
+            });
+
+            // Initialize UI
+            window.svg = d3.select("#viz-container").append("svg")
+                .attr("width", container.clientWidth)
+                .attr("height", container.clientHeight)
                 .call(d3.zoom().scaleExtent([0.2, 10]).on("zoom", (event) => {
-                    chartGroup.attr("transform", event.transform);
+                    window.chartGroup.attr("transform", event.transform);
                 }));
 
-            const chartGroup = svg.append("g");
-            const colors = { "Biological Process": "#4caf50", "Molecular Function": "#64b5f6", "Cellular Component": "#e91e63" };
-            const tooltip = d3.select("#tooltip");
-            const searchInput = document.getElementById('term-search');
-            const dataList = document.getElementById('term-options');
-            const placeholder = document.getElementById('placeholder-text');
+            window.chartGroup = window.svg.append("g");
+            window.tooltip = d3.select("#tooltip");
 
-            let simulation;
-
-            function highlightNode(nodeName) {
-                chartGroup.selectAll(".node")
-                    .attr("fill-opacity", d => d.name === nodeName ? 1 : 0.15)
-                    .attr("stroke", d => d.name === nodeName ? "#fff" : d3.color(colors[d.category]).darker())
-                    .attr("stroke-width", d => d.name === nodeName ? 3 : 1);
-            }
-
-            function resetHighlight() {
-                chartGroup.selectAll(".node")
-                    .attr("fill-opacity", 0.6)
-                    .attr("stroke", d => d3.color(colors[d.category]).darker())
-                    .attr("stroke-width", 1);
-            }
-
-            function updateVisualization(filterValue) {
-                const filteredData = window.GOData.filter(d => d.category === filterValue);
-
-                // Populate Dropdown Search
-                dataList.innerHTML = '';
-                filteredData.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d.name;
-                    dataList.appendChild(opt);
-                });
-                searchInput.value = ''; // Reset search on category change
-
-                const radiusScale = d3.scaleSqrt()
-                    .domain([0, d3.max(window.GOData, d => d.value)])
-                    .range([6, 90]);
-
-                if (simulation) simulation.stop();
-                
-                simulation = d3.forceSimulation(filteredData)
-                    .force("center", d3.forceCenter(width / 2, height / 2))
-                    .force("charge", d3.forceManyBody().strength(5))
-                    .force("collide", d3.forceCollide(d => radiusScale(d.value) + 3))
-                    .alphaDecay(0.02);
-
-                const nodes = chartGroup.selectAll("circle")
-                    .data(filteredData, d => d.name);
-
-                nodes.exit().remove();
-
-                const nodesEnter = nodes.enter().append("circle")
-                    .attr("class", "node")
-                    .attr("fill", d => colors[d.category])
-                    .attr("fill-opacity", 0.6)
-                    .attr("stroke", d => d3.color(colors[d.category]).darker());
-
-                const allNodes = nodesEnter.merge(nodes)
-                    .attr("r", d => radiusScale(d.value))
-                    .on("mouseover", (event, d) => {
-                        tooltip.style("display", "block")
-                            .html(`<strong style="color:${colors[d.category]}">${d.name}</strong><br><strong>${d.value} Genes</strong>`);
-                    })
-                    .on("mousemove", (event) => {
-                        const [x, y] = d3.pointer(event, container);
-                        tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
-                    })
-                    .on("mouseleave", () => tooltip.style("display", "none"))
-                    .on("click", (event, d) => {
-                        event.stopPropagation();
-                        searchInput.value = d.name; // Update search bar
-                        highlightNode(d.name);      // Highlight bubble
-                        showGenes(d);
-                    });
-
-                simulation.on("tick", () => {
-                    allNodes.attr("cx", d => d.x).attr("cy", d => d.y);
-                });
-            }
-
-            function showGenes(d) {
-                placeholder.style.display = 'none';
-                document.getElementById('sidebar-term').innerText = d.name.toUpperCase();
-                document.getElementById('sidebar-term').style.color = colors[d.category];
-                document.getElementById('gene-count').innerText = `${d.value} Associated Genes`;
-                
-                const listContainer = document.getElementById('gene-list');
-                listContainer.innerHTML = "";
-                
-                if (d.genes && Array.isArray(d.genes)) {
-                    d.genes.forEach(g => {
-                        let gid = typeof g === 'string' ? g : g.id;
-                        let gname = typeof g === 'string' ? "" : g.name;
-
-                        const a = document.createElement('a');
-                        a.className = 'gene-card';
-                        a.href = `genome.html?search=${gid}`;
-                        a.target = "_blank";
-                        
-                        a.innerHTML = `<span class="gene-id">${gid}</span>` + 
-                                      (gname ? `<span class="gene-name">${gname}</span>` : '');
-                        
-                        listContainer.appendChild(a);
-                    });
-                }
-            }
-
-            // --- Event Listeners ---
+            // Setup Listeners
+            document.getElementById('category-filter').addEventListener('change', (e) => drawBubbleChart(e.target.value));
             
-            // 1. Dropdown Change
-            document.getElementById('category-filter').addEventListener('change', (e) => {
-                updateVisualization(e.target.value);
-                placeholder.style.display = 'block';
-                document.getElementById('sidebar-term').innerText = "GO Term Details";
-                document.getElementById('sidebar-term').style.color = "#64b5f6";
-                document.getElementById('gene-count').innerText = "No term selected";
-                document.getElementById('gene-list').innerHTML = "";
-            });
-
-            // 2. Search Box Clear on Click
-            searchInput.addEventListener('click', (e) => {
-                e.target.value = ''; // Clears the box when clicked
-                resetHighlight();
-            });
-
-            // 3. Search Box Autocomplete Selection
-            searchInput.addEventListener('input', (e) => {
+            document.getElementById('term-search').addEventListener('input', (e) => {
                 const val = e.target.value;
-                const targetData = chartGroup.selectAll(".node").data().find(d => d.name === val);
-                
+                const targetData = window.chartGroup.selectAll(".node").data().find(d => d.name === val);
                 if (targetData) {
-                    highlightNode(val);
-                    showGenes(targetData);
+                    highlightBubble(val);
+                    showGenesSidebar(targetData);
                 } else if (val === "") {
-                    resetHighlight();
+                    resetBubbleHighlight();
                 }
             });
 
-            // 4. Background Click (Clear highlights)
-            svg.on("click", () => {
-                searchInput.value = '';
-                resetHighlight();
+            document.getElementById('gene-search').addEventListener('input', (e) => {
+                const val = e.target.value.trim().toLowerCase();
+                if (!val) return;
+
+                let targetId = null;
+                
+                // 1. Check exact ID match
+                if (geneIndex.has(e.target.value.trim())) {
+                    targetId = e.target.value.trim();
+                } else {
+                    // 2. Check Name match
+                    for (let [id, data] of geneIndex.entries()) {
+                        if (id.toLowerCase() === val || (data.name && data.name.toLowerCase().includes(val))) {
+                            targetId = id;
+                            break;
+                        }
+                    }
+                }
+
+                // If found, render the network. (Requires full string selection from user to trigger neatly)
+                if (targetId && geneIndex.has(targetId)) {
+                    drawGeneNetwork(targetId);
+                }
             });
 
-            // Initial Draw
-            updateVisualization("Biological Process");
+            // Start
+            setMode('explore');
         });
+
+        // --- MODE TOGGLER ---
+        window.setMode = function(mode) {
+            currentMode = mode;
+            document.getElementById('btn-explore').classList.toggle('active', mode === 'explore');
+            document.getElementById('btn-network').classList.toggle('active', mode === 'network');
+            
+            document.getElementById('control-explore').style.display = mode === 'explore' ? 'flex' : 'none';
+            document.getElementById('control-network').style.display = mode === 'network' ? 'flex' : 'none';
+
+            resetSidebar(mode === 'explore' ? 
+                "Click a bubble or use the search bar to explore the genes in a specific ontology term." : 
+                "Search for a Gene ID (e.g. PF3D7_0100100) or Name to view its GO network."
+            );
+
+            if (mode === 'explore') {
+                document.getElementById('gene-search').value = '';
+                drawBubbleChart(document.getElementById('category-filter').value);
+            } else {
+                window.chartGroup.selectAll("*").remove(); // Clear canvas
+                if (simulation) simulation.stop();
+            }
+        };
+
+        function resetSidebar(msg) {
+            document.getElementById('placeholder-text').style.display = 'block';
+            document.getElementById('placeholder-text').innerText = msg;
+            document.getElementById('sidebar-term').innerText = currentMode === 'explore' ? "GO Term Details" : "Gene Profile";
+            document.getElementById('sidebar-term').style.color = "#aaa";
+            document.getElementById('sidebar-subtitle').innerText = "No item selected";
+            document.getElementById('sidebar-list').innerHTML = "";
+        }
+
+        // ==========================================
+        // MODE 1: BUBBLE CHART (ONTOLOGY EXPLORER)
+        // ==========================================
+        function drawBubbleChart(filterValue) {
+            window.chartGroup.selectAll("*").remove();
+            const width = document.getElementById('viz-container').clientWidth;
+            const height = document.getElementById('viz-container').clientHeight;
+
+            const filteredData = window.GOData.filter(d => d.category === filterValue);
+
+            const dataList = document.getElementById('term-options');
+            dataList.innerHTML = '';
+            filteredData.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.name;
+                dataList.appendChild(opt);
+            });
+
+            const radiusScale = d3.scaleSqrt().domain([0, d3.max(window.GOData, d => d.value)]).range([6, 90]);
+
+            if (simulation) simulation.stop();
+            
+            simulation = d3.forceSimulation(filteredData)
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("charge", d3.forceManyBody().strength(5))
+                .force("collide", d3.forceCollide(d => radiusScale(d.value) + 3))
+                .alphaDecay(0.02);
+
+            const nodes = window.chartGroup.selectAll(".node")
+                .data(filteredData, d => d.name)
+                .enter().append("circle")
+                .attr("class", "node")
+                .attr("r", d => radiusScale(d.value))
+                .attr("fill", d => colors[d.category])
+                .attr("fill-opacity", 0.6)
+                .attr("stroke", d => d3.color(colors[d.category]).darker())
+                .on("mouseover", (event, d) => {
+                    window.tooltip.style("display", "block").html(`<strong style="color:${colors[d.category]}">${d.name}</strong><br><strong>${d.value} Genes</strong>`);
+                })
+                .on("mousemove", (event) => {
+                    const [x, y] = d3.pointer(event, document.getElementById('viz-container'));
+                    window.tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
+                })
+                .on("mouseleave", () => window.tooltip.style("display", "none"))
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    document.getElementById('term-search').value = d.name;
+                    highlightBubble(d.name);
+                    showGenesSidebar(d);
+                });
+
+            simulation.on("tick", () => {
+                nodes.attr("cx", d => d.x).attr("cy", d => d.y);
+            });
+        }
+
+        function highlightBubble(nodeName) {
+            window.chartGroup.selectAll(".node")
+                .attr("fill-opacity", d => d.name === nodeName ? 1 : 0.15)
+                .attr("stroke", d => d.name === nodeName ? "#fff" : d3.color(colors[d.category]).darker())
+                .attr("stroke-width", d => d.name === nodeName ? 3 : 1);
+        }
+
+        function resetBubbleHighlight() {
+            window.chartGroup.selectAll(".node").attr("fill-opacity", 0.6).attr("stroke", d => d3.color(colors[d.category]).darker()).attr("stroke-width", 1);
+        }
+
+        function showGenesSidebar(d) {
+            document.getElementById('placeholder-text').style.display = 'none';
+            document.getElementById('sidebar-term').innerText = d.name.toUpperCase();
+            document.getElementById('sidebar-term').style.color = colors[d.category];
+            document.getElementById('sidebar-subtitle').innerText = `${d.value} Associated Genes`;
+            
+            const listContainer = document.getElementById('sidebar-list');
+            listContainer.innerHTML = "";
+            
+            d.genes.forEach(g => {
+                const a = document.createElement('a');
+                a.className = 'item-card';
+                a.href = `genome.html?search=${g.id}`;
+                a.target = "_blank";
+                a.innerHTML = `<span class="item-id">${g.id}</span>` + (g.name ? `<span class="item-name">${g.name}</span>` : '');
+                listContainer.appendChild(a);
+            });
+        }
+
+        // ==========================================
+        // MODE 2: GENE NETWORK (EGOCENTRIC GRAPH)
+        // ==========================================
+        function drawGeneNetwork(geneId) {
+            window.chartGroup.selectAll("*").remove();
+            if (simulation) simulation.stop();
+
+            const width = document.getElementById('viz-container').clientWidth;
+            const height = document.getElementById('viz-container').clientHeight;
+            const geneData = geneIndex.get(geneId);
+
+            // Construct Network Data
+            let nodes = [{ id: geneId, type: 'gene', name: geneData.name }];
+            let links = [];
+
+            geneData.terms.forEach(t => {
+                nodes.push({ id: t.name, type: 'term', category: t.category, count: t.value });
+                links.push({ source: geneId, target: t.name });
+            });
+
+            // Update Sidebar
+            showNetworkSidebar(geneData);
+
+            // Physics Simulation
+            simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(160))
+                .force("charge", d3.forceManyBody().strength(-500))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collide", d3.forceCollide().radius(d => d.type === 'gene' ? 40 : 25));
+
+            // Draw Links
+            const linkElements = window.chartGroup.append("g")
+                .selectAll("line").data(links).enter().append("line")
+                .attr("class", "link");
+
+            // Draw Nodes
+            const nodeElements = window.chartGroup.append("g")
+                .selectAll("circle").data(nodes).enter().append("circle")
+                .attr("class", "node")
+                .attr("r", d => d.type === 'gene' ? 25 : 15)
+                .attr("fill", d => d.type === 'gene' ? "#ff9800" : colors[d.category])
+                .attr("stroke", d => d.type === 'gene' ? "#fff" : d3.color(colors[d.category]).darker())
+                .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended))
+                .on("mouseover", (event, d) => {
+                    let html = d.type === 'gene' ? 
+                        `<strong style="color:#ff9800">${d.id}</strong><br>${d.name || "Unknown Product"}` : 
+                        `<strong style="color:${colors[d.category]}">${d.id}</strong><br>${d.category}`;
+                    window.tooltip.style("display", "block").html(html);
+                })
+                .on("mousemove", (event) => {
+                    const [x, y] = d3.pointer(event, document.getElementById('viz-container'));
+                    window.tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
+                })
+                .on("mouseleave", () => window.tooltip.style("display", "none"));
+
+            // Draw Labels (Expanded to include Name for the central Gene)
+            const labelElements = window.chartGroup.append("g")
+                .selectAll("text").data(nodes).enter().append("text")
+                .attr("class", "node-label")
+                .attr("dx", d => d.type === 'gene' ? 30 : 20)
+                .attr("dy", 4)
+                .text(d => d.type === 'gene' ? `${d.id} | ${d.name || "Unknown"}` : d.id);
+
+            simulation.on("tick", () => {
+                linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                nodeElements.attr("cx", d => d.x).attr("cy", d => d.y);
+                labelElements.attr("x", d => d.x).attr("y", d => d.y);
+            });
+
+            function dragstarted(event, d) { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+            function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+            function dragended(event, d) { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+        }
+
+        function showNetworkSidebar(geneData) {
+            document.getElementById('placeholder-text').style.display = 'none';
+            document.getElementById('sidebar-term').innerText = geneData.id;
+            document.getElementById('sidebar-term').style.color = "#ff9800";
+            document.getElementById('sidebar-subtitle').innerText = geneData.name || "Unknown Product";
+            
+            const listContainer = document.getElementById('sidebar-list');
+            listContainer.innerHTML = "";
+
+            let bp = geneData.terms.filter(t => t.category === "Biological Process");
+            let mf = geneData.terms.filter(t => t.category === "Molecular Function");
+            let cc = geneData.terms.filter(t => t.category === "Cellular Component");
+
+            function renderCategory(title, array, catClass) {
+                if (array.length === 0) return;
+                listContainer.insertAdjacentHTML('beforeend', `<div class="cat-header ${catClass}">${title}</div>`);
+                array.forEach(t => {
+                    listContainer.insertAdjacentHTML('beforeend', `
+                        <div class="item-card" style="cursor:default;">
+                            <span class="item-id" style="color:inherit;">${t.name}</span>
+                        </div>
+                    `);
+                });
+            }
+
+            renderCategory("Biological Process", bp, "cat-bp");
+            renderCategory("Molecular Function", mf, "cat-mf");
+            renderCategory("Cellular Component", cc, "cat-cc");
+        }
     </script>
 </body>
 </html>

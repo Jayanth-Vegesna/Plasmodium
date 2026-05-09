@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>P. falciparum Transcriptome</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Top Navigation Bar */
+        .top-bar { flex: 0 0 auto; background: #1e1e1e; padding: 15px 25px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); flex-wrap: wrap; gap: 15px; }
+        .left-group { display: flex; align-items: center; gap: 20px; }
+        .title-area h2 { margin: 0; color: #ffffff; font-size: 1.4em; }
+        .back-btn { background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.9em; border: 1px solid #444; transition: all 0.2s; font-weight: bold; }
+        .back-btn:hover { background: #333; color: #fff; border-color: #64b5f6; }
+        
+        .dataset-link { color: #64b5f6; text-decoration: none; border-bottom: 1px dashed #64b5f6; padding-bottom: 2px; transition: all 0.2s; }
+        .dataset-link:hover { color: #ffffff; border-color: #ffffff; }
+
+        /* Toggle Switch */
+        .toggle-group { display: flex; background: #0a0a0a; border-radius: 8px; border: 1px solid #444; overflow: hidden; }
+        .toggle-btn { background: transparent; color: #aaa; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.9em; }
+        .toggle-btn.active { background: #333; color: #fff; }
+        .toggle-btn#btn-daft.active { border-bottom: 3px solid #ff9800; }
+        .toggle-btn#btn-sc.active { border-bottom: 3px solid #d288ed; }
+
+        /* Main Layout */
+        .main-content { flex: 1 1 auto; display: flex; overflow: hidden; position: relative; }
+        
+        /* Sidebar */
+        .sidebar { flex: 0 0 380px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; z-index: 10; }
+        .sidebar-header { padding: 20px; background: #1e1e1e; border-bottom: 1px solid #333; flex-shrink: 0; }
+        .sidebar-header input, .sidebar-header select { width: 100%; padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 0.95em; box-sizing: border-box; outline: none; margin-bottom: 10px; transition: 0.2s; }
+        .sidebar-header input:focus, .sidebar-header select:focus { border-color: #aaa; }
+        
+        .gene-list-container { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        
+        /* Gene Cards */
+        .gene-card { display: block; background: #252525; padding: 12px 15px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #333; transition: all 0.2s; cursor: pointer; position: relative; }
+        .gene-card:hover { background: #2a2a2a; transform: translateX(3px); }
+        .gene-id { font-family: monospace; font-weight: bold; font-size: 1.05em; display: block; }
+        .gene-name { color: #aaa; font-size: 0.85em; display: block; margin-top: 4px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stage-badge { position: absolute; top: 12px; right: 15px; font-size: 0.7em; padding: 3px 8px; border-radius: 12px; font-weight: bold; color: #000; }
+
+        /* Active States for Themes */
+        .theme-daft .gene-card:hover { border-color: #ff9800; }
+        .theme-daft .gene-card.active { border-color: #ff9800; background: #2d2d2d; border-left: 4px solid #ff9800; }
+        .theme-daft .gene-id { color: #ff9800; }
+        .theme-daft .sidebar-header input:focus, .theme-daft .sidebar-header select:focus { border-color: #ff9800; }
+
+        .theme-sc .gene-card:hover { border-color: #d288ed; }
+        .theme-sc .gene-card.active { border-color: #d288ed; background: #2d2d2d; border-left: 4px solid #d288ed; }
+        .theme-sc .gene-id { color: #d288ed; }
+        .theme-sc .sidebar-header input:focus, .theme-sc .sidebar-header select:focus { border-color: #d288ed; }
+        .theme-sc .stage-badge { border-radius: 4px; }
+
+        /* Right Panel: Visualization */
+        .viz-area { flex: 1 1 auto; background: #0f0f0f; display: flex; flex-direction: column; overflow-y: auto; padding: 30px; }
+        
+        .gene-details-header { display: none; background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .detail-title { color: #fff; font-size: 1.8em; margin: 0 0 5px 0; }
+        .detail-desc { color: #aaa; font-size: 1.1em; margin: 0 0 15px 0; }
+        
+        .action-links { display: flex; gap: 10px; flex-wrap: wrap; }
+        .action-btn { background: #2a2a2a; color: #e0e0e0; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.9em; border: 1px solid #444; transition: 0.2s; font-weight: bold; }
+        
+        .theme-daft .action-btn:hover { background: #ff9800; color: #121212; border-color: #ff9800; }
+        .theme-sc .action-btn:hover { background: #d288ed; color: #121212; border-color: #d288ed; }
+        
+        .chart-container { display: none; background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333; flex-grow: 1; min-height: 400px; position: relative; }
+        #placeholder { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: #666; font-style: italic; font-size: 1.2em; text-align: center; }
+
+        /* D3 Chart Styles */
+        .axis text { fill: #aaa; font-size: 12px; font-weight: bold; }
+        .axis path, .axis line { stroke: #444; }
+        .grid-line { stroke: #333; stroke-dasharray: 4,4; }
+        
+        /* DAFT Styles */
+        .daft-line { fill: none; stroke: #ff9800; stroke-width: 4px; stroke-linecap: round; }
+        .daft-dot { fill: #1a1a1a; stroke: #ff9800; stroke-width: 3px; cursor: pointer; transition: r 0.2s; }
+        .daft-dot:hover { r: 8; fill: #ff9800; }
+        .stage-bg { opacity: 0.1; }
+        .stage-label { fill: #666; font-weight: bold; font-size: 14px; text-anchor: middle; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* SC Styles */
+        .sc-line { fill: none; stroke: #d288ed; stroke-width: 4px; stroke-linecap: round; }
+        .sc-dot { fill: #121212; stroke: #d288ed; stroke-width: 3px; cursor: pointer; transition: r 0.2s, fill 0.2s; }
+        .sc-dot:hover { r: 8; fill: #d288ed; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+
+        #tooltip { position: absolute; background: rgba(15, 15, 15, 0.95); padding: 10px; border-radius: 6px; pointer-events: none; display: none; z-index: 2000; font-size: 0.9em; box-shadow: 0px 4px 12px rgba(0,0,0,0.6); color: #fff; font-weight: bold; }
+        .theme-daft #tooltip { border: 1px solid #ff9800; }
+        .theme-sc #tooltip { border: 1px solid #d288ed; }
+    </style>
+</head>
+<body class="theme-daft">
+
+    <div class="top-bar">
+        <div class="left-group">
+            <a href="index.html" class="back-btn">&larr; Dashboard</a>
+            <div class="title-area">
+                <h2><i>Plasmodium falciparum</i> Transcriptome</h2>
+                <div id="dataset-meta" style="font-size: 0.85em; color: #aaa; margin-top: 4px;">
+                    </div>
+            </div>
+        </div>
+        
+        <div class="toggle-group">
+            <button id="btn-daft" class="toggle-btn active" onclick="switchDataset('daft')">Bulk RNA-seq (DAFT-Seq)</button>
+            <button id="btn-sc" class="toggle-btn" onclick="switchDataset('sc')">Single-Cell (10x)</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <input type="text" id="search-input" placeholder="Search by Gene ID or Name...">
+                <select id="stage-filter">
+                    </select>
+            </div>
+            <div class="gene-list-container" id="gene-list"></div>
+        </div>
+        
+        <div class="viz-area">
+            <div id="placeholder">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:15px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Select a dataset and a gene to view expression data.
+            </div>
+
+            <div class="gene-details-header" id="gene-header">
+                <h3 class="detail-title" id="detail-id">Gene ID</h3>
+                <p class="detail-desc" id="detail-name">Product Description</p>
+                <div class="action-links">
+                    <a href="#" id="link-genome" target="_blank" class="action-btn">🧬 View in Genome Browser</a>
+                    <a href="#" id="link-proteome" target="_blank" class="action-btn">🔬 View 3D Structure</a>
+                    <a href="#" id="link-plasmodb" target="_blank" class="action-btn">🔗 View on PlasmoDB</a>
+                </div>
+            </div>
+
+            <div class="chart-container" id="chart-container">
+                <div id="tooltip"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="GENOMIC/transcriptome_data.js"></script>
+    <script src="GENOMIC/sc_atlas_data.js"></script>
+
+    <script>
+        // Global State
+        let currentMode = 'daft'; // 'daft' or 'sc'
+        let activeGeneId = null;
+        
+        // --- SYNCHRONIZED COLOR SCALES ---
+        // Blue (Ring), Yellow (Trophozoite), Red (Schizont)
+        // Purple (Dev Gametocyte), Pink (Female Gametocyte), Teal (Male Gametocyte)
+        const scColorScale = d3.scaleOrdinal()
+            .domain(["ring", "trophozoite", "schizont", "gametocyte (developing)", "gametocyte (female)", "gametocyte (male)"])
+            .range(["#64b5f6", "#ffd54f", "#ef5350", "#ab47bc", "#ec407a", "#26a69a"]);
+        
+        // Fast lookup map to borrow Gene Names from TranscriptomeData
+        let geneNameMap = new Map();
+
+        document.addEventListener("DOMContentLoaded", function() {
+            if (!window.TranscriptomeData && !window.ScAtlasData) {
+                document.getElementById('placeholder').innerHTML = "<span style='color:#ff5252;'>Error: Neither dataset found. Run python scripts first.</span>";
+                return;
+            }
+
+            // Build the Name Map so Single-Cell data can display product descriptions
+            if (window.TranscriptomeData) {
+                window.TranscriptomeData.forEach(g => {
+                    geneNameMap.set(g.id, g.name);
+                });
+            }
+
+            document.getElementById('search-input').addEventListener('input', renderList);
+            document.getElementById('stage-filter').addEventListener('change', renderList);
+
+            switchDataset('daft');
+        });
+
+        // --- Core Toggling Logic ---
+        window.switchDataset = function(mode) {
+            currentMode = mode;
+            
+            // UI Toggle States
+            document.getElementById('btn-daft').classList.toggle('active', mode === 'daft');
+            document.getElementById('btn-sc').classList.toggle('active', mode === 'sc');
+            document.body.className = `theme-${mode}`;
+
+            // Update Metadata Header
+            const metaDiv = document.getElementById('dataset-meta');
+            if (mode === 'daft') {
+                metaDiv.innerHTML = `Source: <a href="https://plasmodb.org/plasmo/app/record/dataset/DS_416070059c" target="_blank" class="dataset-link">Chappell et al., BMC Genomics 2020</a>`;
+            } else {
+                metaDiv.innerHTML = `Source: <a href="https://www.science.org/doi/10.1126/science.adj4088" target="_blank" class="dataset-link">Dogga et al., Science 2024</a>`;
+            }
+
+            buildDropdown();
+            renderList();
+
+            // Auto-swap chart if a gene was already selected
+            if (activeGeneId) {
+                const dataset = mode === 'daft' ? window.TranscriptomeData : window.ScAtlasData;
+                const geneExistsInNewDataset = dataset ? dataset.find(d => d.id === activeGeneId) : null;
+                
+                if (geneExistsInNewDataset) {
+                    selectGene(geneExistsInNewDataset);
+                } else {
+                    document.getElementById('chart-container').style.display = 'none';
+                    document.getElementById('gene-header').style.display = 'none';
+                    document.getElementById('placeholder').style.display = 'flex';
+                    document.getElementById('placeholder').innerHTML = `Gene <b>${activeGeneId}</b> not found in this dataset.`;
+                }
+            }
+        };
+
+        function buildDropdown() {
+            const filter = document.getElementById('stage-filter');
+            filter.innerHTML = `<option value="All">All Peak Stages</option>`;
+            
+            if (currentMode === 'daft') {
+                filter.insertAdjacentHTML('beforeend', `
+                    <option value="Ring">Peak: Ring (0-18h)</option>
+                    <option value="Trophozoite">Peak: Trophozoite (18-30h)</option>
+                    <option value="Schizont">Peak: Schizont (30-48h)</option>
+                `);
+            } else if (currentMode === 'sc' && window.ScAtlasStages) {
+                window.ScAtlasStages.forEach(stage => {
+                    filter.insertAdjacentHTML('beforeend', `<option value="${stage}">Peak: ${stage}</option>`);
+                });
+            }
+        }
+
+        // --- List Rendering ---
+        function renderList() {
+            const dataset = currentMode === 'daft' ? window.TranscriptomeData : window.ScAtlasData;
+            const listContainer = document.getElementById('gene-list');
+            
+            if (!dataset) {
+                listContainer.innerHTML = "<div style='padding:15px;color:#aaa;'>Dataset not loaded.</div>";
+                return;
+            }
+
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const stageFilter = document.getElementById('stage-filter').value;
+            
+            listContainer.innerHTML = "";
+            let renderedCount = 0;
+
+            for (let i = 0; i < dataset.length; i++) {
+                const d = dataset[i];
+                
+                if (stageFilter !== "All" && d.peak_stage !== stageFilter) continue;
+                
+                let actualName = d.name || geneNameMap.get(d.id) || "Uncharacterized protein";
+                
+                const matchId = d.id.toLowerCase().includes(query);
+                const matchName = actualName.toLowerCase().includes(query);
+                if (query && !matchId && !matchName) continue;
+                
+                let badgeColor = "#666";
+                let badgeTextColor = "#000";
+
+                if (currentMode === 'daft') {
+                    if(d.peak_stage === "Ring") { badgeColor = "#64b5f6"; badgeTextColor = "#000"; }
+                    else if(d.peak_stage === "Trophozoite") { badgeColor = "#ffd54f"; badgeTextColor = "#000"; }
+                    else if(d.peak_stage === "Schizont") { badgeColor = "#ef5350"; badgeTextColor = "#fff"; }
+                } else {
+                    badgeColor = scColorScale(d.peak_stage);
+                    if (["ring", "trophozoite"].includes(d.peak_stage)) {
+                        badgeTextColor = "#000";
+                    } else {
+                        badgeTextColor = "#fff"; // For Schizont and all Gametocytes
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = `gene-card ${d.id === activeGeneId ? 'active' : ''}`;
+                card.setAttribute('data-id', d.id);
+                
+                card.innerHTML = `
+                    <span class="gene-id">${d.id}</span>
+                    <span class="gene-name">${actualName}</span>
+                    <span class="stage-badge" style="background:${badgeColor}; color:${badgeTextColor}">${d.peak_stage}</span>
+                `;
+                
+                card.onclick = () => selectGene(d);
+                listContainer.appendChild(card);
+                
+                renderedCount++;
+                if (renderedCount > 300) break; 
+            }
+        }
+
+        // --- Gene Selection & Chart Routing ---
+        function selectGene(geneData) {
+            activeGeneId = geneData.id;
+            
+            document.querySelectorAll('.gene-card').forEach(c => c.classList.remove('active'));
+            const activeCard = document.querySelector(`.gene-card[data-id="${geneData.id}"]`);
+            if (activeCard) activeCard.classList.add('active');
+
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('gene-header').style.display = 'block';
+            document.getElementById('chart-container').style.display = 'block';
+
+            let actualName = geneData.name || geneNameMap.get(geneData.id) || "Uncharacterized protein";
+
+            document.getElementById('detail-id').innerText = geneData.id;
+            document.getElementById('detail-name').innerText = actualName;
+            
+            document.getElementById('link-genome').href = `genome.html?search=${geneData.id}`;
+            document.getElementById('link-proteome').href = `proteome.html?search=${geneData.id}`;
+            document.getElementById('link-plasmodb').href = `https://plasmodb.org/plasmo/app/record/gene/${geneData.id}`;
+
+            if (currentMode === 'daft') {
+                drawDaftChart(geneData);
+            } else {
+                drawScChart(geneData);
+            }
+        }
+
+        // ==========================================
+        // D3 CHART: BULK RNA-SEQ (DAFT-SEQ)
+        // ==========================================
+        function drawDaftChart(geneData) {
+            const container = document.getElementById('chart-container');
+            container.innerHTML = '<div id="tooltip"></div>'; 
+            
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const margin = { top: 40, right: 30, bottom: 50, left: 70 };
+            
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const chartGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const timePoints = [0, 8, 16, 24, 32, 40, 48];
+            
+            const xScale = d3.scaleLinear()
+                .domain([0, 48])
+                .range([0, innerWidth]);
+
+            const yMax = d3.max(geneData.expression) * 1.1 || 1;
+            const yScale = d3.scaleLinear()
+                .domain([0, yMax])
+                .range([innerHeight, 0]);
+
+            const zones = [
+                { name: "Ring", start: 0, end: 18, color: "#64b5f6" },
+                { name: "Trophozoite", start: 18, end: 30, color: "#ffd54f" },
+                { name: "Schizont", start: 30, end: 48, color: "#ef5350" }
+            ];
+
+            zones.forEach(z => {
+                chartGroup.append("rect")
+                    .attr("class", "stage-bg")
+                    .attr("x", xScale(z.start))
+                    .attr("y", 0)
+                    .attr("width", xScale(z.end) - xScale(z.start))
+                    .attr("height", innerHeight)
+                    .attr("fill", z.color);
+                
+                chartGroup.append("text")
+                    .attr("class", "stage-label")
+                    .attr("x", xScale(z.start + (z.end - z.start) / 2))
+                    .attr("y", -10)
+                    .text(z.name);
+            });
+
+            const yAxis = d3.axisLeft(yScale).ticks(6).tickFormat(d3.format(".1f"));
+            const xAxis = d3.axisBottom(xScale).tickValues(timePoints).tickFormat(d => d + "h");
+
+            chartGroup.append("g")
+                .attr("class", "grid")
+                .selectAll("line")
+                .data(yScale.ticks(6))
+                .enter().append("line")
+                .attr("class", "grid-line")
+                .attr("x1", 0)
+                .attr("x2", innerWidth)
+                .attr("y1", d => yScale(d))
+                .attr("y2", d => yScale(d));
+
+            chartGroup.append("g").attr("class", "axis").attr("transform", `translate(0,${innerHeight})`).call(xAxis);
+            chartGroup.append("g").attr("class", "axis").call(yAxis);
+
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 20)
+                .attr("x", 0 - (height / 2))
+                .style("text-anchor", "middle")
+                .style("fill", "#aaa")
+                .style("font-size", "14px")
+                .style("font-weight", "bold")
+                .text("Expression (TPM)");
+
+            const lineGen = d3.line()
+                .x((d, i) => xScale(timePoints[i]))
+                .y(d => yScale(d))
+                .curve(d3.curveMonotoneX);
+
+            const path = chartGroup.append("path")
+                .datum(geneData.expression)
+                .attr("class", "daft-line")
+                .attr("d", lineGen);
+
+            const totalLength = path.node().getTotalLength();
+            path.attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition().duration(1000).ease(d3.easeCubicOut)
+                .attr("stroke-dashoffset", 0);
+
+            const tooltip = d3.select("#tooltip");
+            chartGroup.selectAll(".daft-dot")
+                .data(geneData.expression)
+                .enter().append("circle")
+                .attr("class", "daft-dot")
+                .attr("cx", (d, i) => xScale(timePoints[i]))
+                .attr("cy", d => yScale(d))
+                .attr("r", 0)
+                .on("mouseover", function(event, d) {
+                    const i = chartGroup.selectAll(".daft-dot").nodes().indexOf(this);
+                    tooltip.style("display", "block").html(`Hour: ${timePoints[i]}h<br>TPM: ${d.toFixed(2)}`);
+                })
+                .on("mousemove", function(event) {
+                    const [x, y] = d3.pointer(event, container);
+                    tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
+                })
+                .on("mouseout", () => tooltip.style("display", "none"))
+                .transition().delay((d, i) => i * 140).duration(300).attr("r", 5);
+        }
+
+        // ==========================================
+        // D3 CHART: SINGLE-CELL RNA-SEQ (10x)
+        // ==========================================
+        function drawScChart(geneData) {
+            const container = document.getElementById('chart-container');
+            container.innerHTML = '<div id="tooltip"></div>';
+            
+            const stages = window.ScAtlasStages;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const margin = { top: 40, right: 40, bottom: 160, left: 70 }; 
+            
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const chartGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scalePoint()
+                .domain(stages)
+                .range([0, innerWidth])
+                .padding(0.5);
+
+            const yMax = d3.max(geneData.expression) * 1.1 || 1; 
+            const yScale = d3.scaleLinear()
+                .domain([0, yMax])
+                .range([innerHeight, 0]);
+
+            chartGroup.append("g")
+                .attr("class", "grid")
+                .selectAll("line")
+                .data(yScale.ticks(5))
+                .enter().append("line")
+                .attr("class", "grid-line")
+                .attr("x1", 0)
+                .attr("x2", innerWidth)
+                .attr("y1", d => yScale(d))
+                .attr("y2", d => yScale(d));
+
+            const yAxis = d3.axisLeft(yScale).ticks(5);
+            const xAxis = d3.axisBottom(xScale);
+
+            chartGroup.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(xAxis)
+                .selectAll("text")  
+                    .style("text-anchor", "end")
+                    .attr("dx", "-.8em")
+                    .attr("dy", ".15em")
+                    .attr("transform", "rotate(-45)");
+
+            chartGroup.append("g").attr("class", "axis").call(yAxis);
+
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 20)
+                .attr("x", 0 - (height / 2))
+                .style("text-anchor", "middle")
+                .style("fill", "#aaa")
+                .style("font-size", "14px")
+                .style("font-weight", "bold")
+                .text("Average Expression (scRNA-seq)");
+
+            const lineGen = d3.line()
+                .x((d, i) => xScale(stages[i]))
+                .y(d => yScale(d))
+                .curve(d3.curveMonotoneX);
+
+            const path = chartGroup.append("path")
+                .datum(geneData.expression)
+                .attr("class", "sc-line")
+                .attr("d", lineGen);
+
+            const totalLength = path.node().getTotalLength();
+            path.attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition().duration(1000).ease(d3.easeCubicOut)
+                .attr("stroke-dashoffset", 0);
+
+            const tooltip = d3.select("#tooltip");
+
+            chartGroup.selectAll(".sc-dot")
+                .data(geneData.expression)
+                .enter().append("circle")
+                .attr("class", "sc-dot")
+                .attr("cx", (d, i) => xScale(stages[i]))
+                .attr("cy", d => yScale(d))
+                .attr("r", 0)
+                .style("stroke", (d, i) => scColorScale(stages[i]))
+                .on("mouseover", function(event, d) {
+                    const i = chartGroup.selectAll(".sc-dot").nodes().indexOf(this);
+                    tooltip.style("display", "block").html(`Stage: ${stages[i]}<br>Value: ${d.toFixed(3)}`);
+                    d3.select(this).style("fill", scColorScale(stages[i]));
+                })
+                .on("mousemove", function(event) {
+                    const [x, y] = d3.pointer(event, container);
+                    tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                    d3.select(this).style("fill", "#121212");
+                })
+                .transition().delay((d, i) => i * 150).duration(400).attr("r", 5);
+        }
+
+        window.addEventListener('resize', () => {
+            if (activeGeneId) {
+                const dataset = currentMode === 'daft' ? window.TranscriptomeData : window.ScAtlasData;
+                const activeData = dataset.find(d => d.id === activeGeneId);
+                if (activeData) {
+                    currentMode === 'daft' ? drawDaftChart(activeData) : drawScChart(activeData);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

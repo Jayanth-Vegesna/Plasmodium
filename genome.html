@@ -39,6 +39,10 @@
         .axis path, .axis line { stroke: #444; }
         .feature { cursor: pointer; transition: filter 0.1s, stroke 0.1s; }
         .feature:hover { filter: brightness(1.6); stroke: #fff; stroke-width: 1.5px; }
+        
+        /* Highlight class for selected feature */
+        .selected-feature { filter: brightness(1.8) drop-shadow(0 0 4px rgba(255,255,255,0.4)) !important; stroke: #fff !important; stroke-width: 2.5px !important; }
+
         .strand-label { fill: #888; font-size: 12px; font-weight: bold; pointer-events: none; }
         .track-title { fill: #fff; font-size: 14px; font-weight: bold; pointer-events: none; }
         .dna-text { fill: #121212; font-family: monospace; font-size: 12px; font-weight: bold; pointer-events: none; }
@@ -47,21 +51,10 @@
         .signal { transition: fill 0.2s, opacity 0.2s; cursor: crosshair; }
 
         .tooltip {
-            position: absolute;
-            text-align: left;
-            padding: 10px 14px;
-            font: 13px 'Segoe UI', sans-serif;
-            background: rgba(15, 15, 15, 0.85);
-            color: #fff;
-            border: 1px solid #64b5f6;
-            border-radius: 6px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 1000;
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.5);
-            line-height: 1.5;
-            min-width: 160px;
+            position: absolute; text-align: left; padding: 10px 14px; font: 13px 'Segoe UI', sans-serif;
+            background: rgba(15, 15, 15, 0.85); color: #fff; border: 1px solid #64b5f6; border-radius: 6px;
+            pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 1000;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.5); line-height: 1.5; min-width: 160px;
         }
 
         .clear-btn { background: #333; color: #ff6b6b; border-color: #ff6b6b; display: none; font-weight: bold; }
@@ -133,6 +126,7 @@
         <div class="seq-placeholder">Click on a genomic feature to view its FASTA sequence here...</div>
     </div>
 
+    <script src="GENOMIC/transcriptome_data.js"></script>
     <script src="GENOMIC/genome_data.js"></script>
 
     <script>
@@ -152,6 +146,7 @@
         const getDisplayName = (t) => displayNames[t] || t;
 
         let customTracks = []; 
+        let geneNameMap = new Map(); // Dictionary for fast name lookups
         const tooltip = d3.select("#tooltip");
 
         function formatChromosomeName(rawName) {
@@ -176,7 +171,6 @@
 
         function getFeatureColor(d) {
             if (d.type === "intron") return colorScale["intron"]; 
-            
             if (d.family === "var") return familyColors["var"];
             if (d.family === "rifin") return familyColors["rifin"];
             if (d.family === "stevor") return familyColors["stevor"];
@@ -196,6 +190,13 @@
             if (!window.GenomeData) {
                 alert("Error: Could not load data from GENOMIC/genome_data.js.");
                 return;
+            }
+
+            // Build our lookup dictionary from the Transcriptome data
+            if (window.TranscriptomeData) {
+                window.TranscriptomeData.forEach(g => {
+                    geneNameMap.set(g.id, g.name);
+                });
             }
 
             const chromSelect = document.getElementById('chrom-select');
@@ -221,7 +222,7 @@
             });
 
             // ==========================================
-            // CORRECTED CROSS-LINKING LOGIC
+            // CROSS-LINKING LOGIC
             // ==========================================
             const urlParams = new URLSearchParams(window.location.search);
             const targetGene = urlParams.get('search') || urlParams.get('gene');
@@ -232,13 +233,16 @@
 
                 const searchLower = targetGene.toLowerCase();
                 for (const chrom in window.GenomeData) {
-                    const feature = window.GenomeData[chrom].find(f => 
+                    // Find all features belonging to this gene
+                    const allMatches = window.GenomeData[chrom].filter(f => 
                         (f.name && f.name.toLowerCase().includes(searchLower)) || 
                         (f.id && f.id.toLowerCase().includes(searchLower))
                     );
-                    if (feature) {
+                    
+                    if (allMatches.length > 0) {
                         foundChrom = chrom;
-                        targetFeature = feature;
+                        // Prioritize grabbing the CDS. If no CDS exists, fall back to whatever matched.
+                        targetFeature = allMatches.find(f => f.type === "CDS") || allMatches[0];
                         break;
                     }
                 }
@@ -248,32 +252,23 @@
                     drawBrowser(foundChrom);
                     
                     setTimeout(() => {
-                        // 1. Get chromosome total length to calculate proper zoom multiplier
                         const maxLen = window.ChromosomeLengths[foundChrom];
-                        
-                        // 2. Set viewing window to 15,000 base pairs
                         const zoomWindow = 15000; 
-                        
-                        // 3. D3 Zoom 'k' is a multiplier of the total chromosome length
                         const targetScale = maxLen / zoomWindow;
-                        
-                        // 4. Calculate coordinates to center the gene
                         const geneCenter = targetFeature.start + (targetFeature.end - targetFeature.start) / 2;
                         const originalPixelX = margin.left + (geneCenter / maxLen) * (width - margin.left - margin.right);
                         const targetX = (width / 2) - (originalPixelX * targetScale);
                         
-                        // 5. Perform smooth zoom animation
                         globalSvg.transition().duration(1200).call(
                             globalZoom.transform, 
                             d3.zoomIdentity.translate(targetX, 0).scale(targetScale)
                         ).on("end", () => {
-                            // 6. Click the rectangle to show metadata
+                            // Click the specific prioritized rectangle to show metadata and highlight it
                             globalSvg.selectAll("rect.feature")
                                 .filter(d => d === targetFeature)
                                 .dispatch("click");
                         });
 
-                        // Clean up URL
                         window.history.replaceState({}, document.title, window.location.pathname);
                         
                     }, 400); 
@@ -313,12 +308,7 @@
                         }
                     }
                     
-                    customTracks.push({
-                        name: trackName,
-                        data: trackData,
-                        maxSignal: trackMaxSignal
-                    });
-                    
+                    customTracks.push({ name: trackName, data: trackData, maxSignal: trackMaxSignal });
                     document.getElementById('clear-tracks-btn').style.display = 'inline-block';
                     
                     const chrom = document.getElementById('chrom-select').value;
@@ -430,6 +420,11 @@
                 .text(d => `${d.name} (${d.type})`)
                 .select(function() { return this.parentNode; }) 
                 .on("click", function(event, d) {
+                    
+                    // Clear previous highlights
+                    d3.selectAll("rect.feature").classed("selected-feature", false);
+                    
+                    // If clicking the same one again, just clear it
                     if (selectedFeature === d) {
                         clearPanels();
                         selectedFeature = null;
@@ -437,6 +432,8 @@
                     }
                     
                     selectedFeature = d;
+                    // Apply highlight class to the clicked feature
+                    d3.select(this).classed("selected-feature", true);
 
                     sequencePanel.innerHTML = d.seq ? d.seq : "<span class='seq-placeholder'>No sequence available for this feature.</span>";
                     
@@ -444,15 +441,24 @@
                     let color = getFeatureColor(d);
                     
                     let familyText = d.family ? `<br><b>Family:</b> <span style="color:${color}; font-weight:bold;">${d.family}</span>` : "";
+                    
+                    // =====================================
+                    // FAST NAME LOOKUP (Via Dictionary)
+                    // =====================================
+                    // Gene features sometimes look like PF3D7_0100100.1, so we split at the period to match the main ID.
+                    let baseId = d.name.split('.')[0]; 
+                    let productName = geneNameMap.get(baseId) || d.description || d.product || ""; 
+                    let productHtml = productName ? `<div style="color:#aaa; font-size: 0.95em; margin-bottom: 8px; font-style: italic;">${productName}</div>` : "";
 
                     let structureLink = "";
                     if (d.type === "CDS" || d.type === "gene" || d.type === "mRNA") {
-                        structureLink = `<div style="margin-top: 15px;"><a href="proteome.html?search=${d.name}" target="_blank" style="display: inline-block; background: #64b5f6; color: #121212; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; transition: 0.2s;">🔬 View 3D Structure</a></div>`;
+                        structureLink = `<div style="margin-top: 15px;"><a href="proteome.html?search=${baseId}" target="_blank" style="display: inline-block; background: #64b5f6; color: #121212; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; transition: 0.2s;">🔬 View 3D Structure</a></div>`;
                     }
 
                     infoPanel.innerHTML = `
-                        <div style="color: ${color}; font-weight: bold; font-size: 1.3em; border-bottom: 1px solid #333; padding-bottom: 5px;">${displayType.toUpperCase()}</div>
-                        <div style="margin-top: 10px; font-size: 1.05em; line-height:1.5;">
+                        <div style="color: ${color}; font-weight: bold; font-size: 1.3em; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 5px;">${displayType.toUpperCase()}</div>
+                        ${productHtml}
+                        <div style="font-size: 1.05em; line-height:1.5;">
                             <b>ID:</b> ${d.name} 
                             ${familyText}
                             <br><b>Range:</b> ${d.start.toLocaleString()} - ${d.end.toLocaleString()}
@@ -574,6 +580,7 @@
                 globalSvg.transition().duration(750).call(globalZoom.transform, d3.zoomIdentity);
             }
             clearPanels();
+            d3.selectAll("rect.feature").classed("selected-feature", false);
         };
     </script>
 </body>
