@@ -2,26 +2,24 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P. falciparum GO Explorer</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
         
         .controls { 
             background: #1e1e1e; padding: 12px 25px; border-bottom: 1px solid #333; 
             display: flex; justify-content: space-between; align-items: center; z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5); flex-wrap: wrap; gap: 15px;
-            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); flex-wrap: wrap; gap: 15px; flex: 0 0 auto;
         }
 
         .left-group { display: flex; align-items: center; gap: 20px; }
         .title-area h2 { margin: 0; color: #ffffff; font-size: 1.3em; }
         
-        .back-btn { background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.85em; border: 1px solid #444; transition: 0.2s; font-weight: bold; }
+        .back-btn { background: #2a2a2a; color: #aaa; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 0.85em; border: 1px solid #444; transition: 0.2s; font-weight: bold; white-space: nowrap; }
         .back-btn:hover { background: #333; color: #fff; border-color: #64b5f6; }
 
-        /* Toggle Switch */
         .toggle-group { display: flex; background: #0a0a0a; border-radius: 8px; border: 1px solid #444; overflow: hidden; }
         .toggle-btn { background: transparent; color: #aaa; border: none; padding: 8px 15px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.85em; }
         .toggle-btn.active { background: #333; color: #fff; }
@@ -29,25 +27,23 @@
         .toggle-btn#btn-network.active { border-bottom: 3px solid #ff9800; }
 
         .filter-area { display: flex; align-items: center; gap: 15px; }
-        input[type="text"], select {
-            padding: 8px 12px; background: #2a2a2a; color: #fff; border: 1px solid #444;
-            border-radius: 6px; outline: none; cursor: pointer; font-size: 0.9em; box-sizing: border-box;
-        }
+        input[type="text"], select { padding: 8px 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; outline: none; cursor: pointer; font-size: 0.9em; box-sizing: border-box; }
         input[type="text"] { width: 220px; cursor: text; }
         input[type="text"]:focus, select:hover { border-color: #64b5f6; }
 
-        #main-container { position: relative; flex-grow: 1; display: flex; overflow: hidden; }
-        #viz-container { flex-grow: 1; position: relative; background: #0f0f0f; cursor: grab; }
+        /* Strict flex trapping */
+        #main-container { position: relative; flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
+        #viz-container { flex: 1 1 auto; min-height: 0; position: relative; background: #0f0f0f; cursor: grab; }
         #viz-container:active { cursor: grabbing; }
         
         #gene-sidebar {
-            width: 380px; background: #1a1a1a; border-left: 1px solid #333;
-            display: flex; flex-direction: column; flex-shrink: 0; z-index: 500;
+            flex: 0 0 380px; min-height: 0; background: #1a1a1a; border-left: 1px solid #333;
+            display: flex; flex-direction: column; z-index: 500;
             box-shadow: -5px 0 15px rgba(0,0,0,0.5);
         }
 
-        .sidebar-header { position: sticky; top: 0; background: #1a1a1a; padding: 20px; border-bottom: 1px solid #333; z-index: 10; flex-shrink: 0; }
-        .sidebar-content { padding: 15px 20px; overflow-y: auto; flex-grow: 1; }
+        .sidebar-header { background: #1a1a1a; padding: 20px; border-bottom: 1px solid #333; flex: 0 0 auto; z-index: 10; }
+        .sidebar-content { padding: 15px 20px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 
         .sidebar-title { color: #64b5f6; font-size: 1.2em; font-weight: bold; margin-bottom: 5px; line-height: 1.3; }
         .gene-count-label { color: #888; font-size: 0.85em; display: block; }
@@ -58,51 +54,48 @@
         .item-id { color: #64b5f6; font-family: monospace; font-weight: bold; font-size: 1.1em; display: block; }
         .item-name { color: #e0e0e0; font-size: 0.85em; display: block; margin-top: 6px; line-height: 1.4; }
         
-        /* Categories in Sidebar */
         .cat-header { font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; margin: 15px 0 5px 0; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 3px; }
         .cat-bp { color: #4caf50; border-bottom-color: #4caf50; }
         .cat-mf { color: #64b5f6; border-bottom-color: #64b5f6; }
         .cat-cc { color: #e91e63; border-bottom-color: #e91e63; }
 
-        /* D3 Nodes and Links */
         .node { cursor: pointer; stroke-width: 1px; transition: stroke 0.2s, fill-opacity 0.2s; }
         .node:hover { fill-opacity: 1 !important; stroke: #ffffff !important; stroke-width: 2px; }
         .link { stroke: #555; stroke-opacity: 0.6; stroke-width: 2px; }
         .node-label { font-family: sans-serif; font-size: 12px; fill: #e0e0e0; pointer-events: none; text-shadow: 0px 2px 4px #000; font-weight: bold; }
         
-        #tooltip {
-            position: absolute; background: rgba(10, 10, 10, 0.95); padding: 12px; border: 1px solid #64b5f6;
-            border-radius: 6px; pointer-events: none; display: none; z-index: 2000; font-size: 0.9em;
-            backdrop-filter: blur(4px); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
+        #tooltip { position: absolute; background: rgba(10, 10, 10, 0.95); padding: 12px; border: 1px solid #64b5f6; border-radius: 6px; pointer-events: none; display: none; z-index: 2000; font-size: 0.9em; backdrop-filter: blur(4px); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e1e1e; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #666; }
 
         /* --- MOBILE OPTIMIZATION --- */
         @media (max-width: 768px) {
-            .controls { flex-direction: column; align-items: stretch; padding: 15px; }
-            .left-group { justify-content: space-between; width: 100%; margin-bottom: 10px; }
+            .controls { padding: 10px; flex-direction: column; align-items: stretch; gap: 8px; }
+            .left-group { justify-content: space-between; width: 100%; }
             .title-area h2 { font-size: 1.1em; }
+            .back-btn { padding: 6px 10px; font-size: 0.8em; }
             
-            .toggle-group { width: 100%; display: flex; margin-bottom: 10px; }
-            .toggle-btn { flex: 1; text-align: center; padding: 8px; font-size: 0.8em; }
+            .toggle-group { width: 100%; display: flex; margin-bottom: 0; }
+            .toggle-btn { flex: 1; text-align: center; padding: 6px 10px; font-size: 0.8em; }
             
-            .filter-area { flex-direction: column; align-items: stretch; width: 100%; gap: 10px; }
-            .filter-area > div { width: 100%; }
-            input[type="text"], select { width: 100%; max-width: 100%; }
+            .filter-area { flex-direction: column; width: 100%; gap: 8px; }
+            input[type="text"], select { width: 100%; max-width: 100%; padding: 8px; font-size: 0.9em; }
 
             #main-container { flex-direction: column; }
-            #viz-container { height: 45vh; flex-grow: 0; flex-shrink: 0; border-bottom: 1px solid #333; }
             
-            #gene-sidebar { 
-                width: 100%; height: 55vh; flex-grow: 1; 
-                border-left: none; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); 
-            }
-            .sidebar-header { padding: 15px; }
+            /* Give network specific percentage, keep strictly trapped */
+            #viz-container { flex: 0 0 45%; min-height: 0; height: auto; border-bottom: 1px solid #333; }
+            
+            /* Give sidebar specific percentage, keep strictly trapped */
+            #gene-sidebar { flex: 0 0 55%; min-height: 0; height: auto; border-left: none; width: 100%; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
+            
+            .sidebar-header { padding: 10px 15px; }
+            .sidebar-title { font-size: 1.1em; }
+            .gene-count-label { font-size: 0.8em; }
             .sidebar-content { padding: 10px 15px; }
+            .item-card { padding: 8px 10px; margin-bottom: 6px; }
         }
     </style>
 </head>
@@ -162,30 +155,25 @@
 
     <script src="GENOMIC/go_data.js"></script>
     <script>
-        // Global variables
         const colors = { "Biological Process": "#4caf50", "Molecular Function": "#64b5f6", "Cellular Component": "#e91e63" };
         let currentMode = 'explore';
-        let geneIndex = new Map(); // Reverse lookup: Gene -> GO Terms
+        let geneIndex = new Map(); 
         let simulation;
 
         document.addEventListener("DOMContentLoaded", function() {
             const container = document.getElementById('viz-container');
             if (!window.GOData) {
-                container.innerHTML = "<h3 style='color:red; text-align:center; padding:50px;'>Error: Data not found. Run make_ontology.py first.</h3>";
+                container.innerHTML = "<h3 style='color:red; text-align:center; padding:50px;'>Error: Data not found. Run python script first.</h3>";
                 return;
             }
 
-            // --- Build Reverse Index (Gene -> GO Terms) ---
             window.GOData.forEach(term => {
                 term.genes.forEach(g => {
-                    if (!geneIndex.has(g.id)) {
-                        geneIndex.set(g.id, { id: g.id, name: g.name, terms: [] });
-                    }
+                    if (!geneIndex.has(g.id)) { geneIndex.set(g.id, { id: g.id, name: g.name, terms: [] }); }
                     geneIndex.get(g.id).terms.push({ name: term.name, category: term.category, value: term.value });
                 });
             });
 
-            // Populate Gene Datalist with both ID and Name
             const geneListEl = document.getElementById('gene-options');
             geneIndex.forEach((data, id) => {
                 const opt = document.createElement('option');
@@ -194,113 +182,71 @@
                 geneListEl.appendChild(opt);
             });
 
-            // Initialize UI with 100% width/height for responsiveness
-            window.svg = d3.select("#viz-container").append("svg")
-                .attr("width", "100%")
-                .attr("height", "100%")
-                .call(d3.zoom().scaleExtent([0.2, 10]).on("zoom", (event) => {
-                    window.chartGroup.attr("transform", event.transform);
-                }));
+            window.svg = d3.select("#viz-container").append("svg").attr("width", "100%").attr("height", "100%")
+                .call(d3.zoom().scaleExtent([0.2, 10]).on("zoom", (event) => { window.chartGroup.attr("transform", event.transform); }));
 
             window.chartGroup = window.svg.append("g");
             window.tooltip = d3.select("#tooltip");
 
-            // Setup Listeners
             document.getElementById('category-filter').addEventListener('change', (e) => drawBubbleChart(e.target.value));
             
             document.getElementById('term-search').addEventListener('input', (e) => {
                 const val = e.target.value;
                 const targetData = window.chartGroup.selectAll(".node").data().find(d => d.name === val);
-                if (targetData) {
-                    highlightBubble(val);
-                    showGenesSidebar(targetData);
-                } else if (val === "") {
-                    resetBubbleHighlight();
-                }
+                if (targetData) { highlightBubble(val); showGenesSidebar(targetData); } 
+                else if (val === "") { resetBubbleHighlight(); }
             });
 
             document.getElementById('gene-search').addEventListener('input', (e) => {
                 const val = e.target.value.trim().toLowerCase();
                 if (!val) return;
-
                 let targetId = null;
                 
-                // 1. Check exact ID match
-                if (geneIndex.has(e.target.value.trim())) {
-                    targetId = e.target.value.trim();
-                } else {
-                    // 2. Check Name match
+                if (geneIndex.has(e.target.value.trim())) { targetId = e.target.value.trim(); } 
+                else {
                     for (let [id, data] of geneIndex.entries()) {
-                        if (id.toLowerCase() === val || (data.name && data.name.toLowerCase().includes(val))) {
-                            targetId = id;
-                            break;
-                        }
+                        if (id.toLowerCase() === val || (data.name && data.name.toLowerCase().includes(val))) { targetId = id; break; }
                     }
                 }
-
-                if (targetId && geneIndex.has(targetId)) {
-                    drawGeneNetwork(targetId);
-                }
+                if (targetId && geneIndex.has(targetId)) { drawGeneNetwork(targetId); }
             });
 
-            // Handle Resize
-            window.addEventListener('resize', () => {
-                if(currentMode === 'explore') drawBubbleChart(document.getElementById('category-filter').value);
-            });
+            window.addEventListener('resize', () => { if(currentMode === 'explore') drawBubbleChart(document.getElementById('category-filter').value); });
 
-            // --- STARTUP LOGIC: URL PARAMETER PARSING ---
             const urlParams = new URLSearchParams(window.location.search);
             const incomingSearch = urlParams.get('search');
             
             if (incomingSearch) {
                 let targetId = null;
                 const val = incomingSearch.trim().toLowerCase();
-                
-                // 1. Check exact ID match
-                if (geneIndex.has(incomingSearch.trim())) {
-                    targetId = incomingSearch.trim();
-                } else {
-                    // 2. Check Name match
+                if (geneIndex.has(incomingSearch.trim())) { targetId = incomingSearch.trim(); } 
+                else {
                     for (let [id, data] of geneIndex.entries()) {
-                        if (id.toLowerCase() === val || (data.name && data.name.toLowerCase().includes(val))) {
-                            targetId = id;
-                            break;
-                        }
+                        if (id.toLowerCase() === val || (data.name && data.name.toLowerCase().includes(val))) { targetId = id; break; }
                     }
                 }
-
                 if (targetId && geneIndex.has(targetId)) {
                     setMode('network');
                     document.getElementById('gene-search').value = targetId;
-                    // Add slight delay to ensure container dimensions are calculated
                     setTimeout(() => drawGeneNetwork(targetId), 100); 
-                } else {
-                    setMode('explore'); // Fallback if gene has no GO data
-                }
-            } else {
-                setMode('explore');
-            }
+                } else { setMode('explore'); }
+            } else { setMode('explore'); }
         });
 
-        // --- MODE TOGGLER ---
         window.setMode = function(mode) {
             currentMode = mode;
             document.getElementById('btn-explore').classList.toggle('active', mode === 'explore');
             document.getElementById('btn-network').classList.toggle('active', mode === 'network');
-            
             document.getElementById('control-explore').style.display = mode === 'explore' ? 'flex' : 'none';
             document.getElementById('control-network').style.display = mode === 'network' ? 'flex' : 'none';
 
-            resetSidebar(mode === 'explore' ? 
-                "Click a bubble or use the search bar to explore the genes in a specific ontology term." : 
-                "Search for a Gene ID (e.g. PF3D7_0100100) or Name to view its GO network."
-            );
+            resetSidebar(mode === 'explore' ? "Click a bubble or use the search bar to explore the genes in a specific ontology term." : "Search for a Gene ID to view its GO network.");
 
             if (mode === 'explore') {
                 document.getElementById('gene-search').value = '';
                 drawBubbleChart(document.getElementById('category-filter').value);
             } else {
-                window.chartGroup.selectAll("*").remove(); // Clear canvas
+                window.chartGroup.selectAll("*").remove(); 
                 if (simulation) simulation.stop();
             }
         };
@@ -314,9 +260,6 @@
             document.getElementById('sidebar-list').innerHTML = "";
         }
 
-        // ==========================================
-        // MODE 1: BUBBLE CHART (ONTOLOGY EXPLORER)
-        // ==========================================
         function drawBubbleChart(filterValue) {
             window.chartGroup.selectAll("*").remove();
             const width = document.getElementById('viz-container').clientWidth;
@@ -326,11 +269,7 @@
 
             const dataList = document.getElementById('term-options');
             dataList.innerHTML = '';
-            filteredData.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.name;
-                dataList.appendChild(opt);
-            });
+            filteredData.forEach(d => { const opt = document.createElement('option'); opt.value = d.name; dataList.appendChild(opt); });
 
             const radiusScale = d3.scaleSqrt().domain([0, d3.max(window.GOData, d => d.value)]).range([6, 90]);
 
@@ -342,44 +281,21 @@
                 .force("collide", d3.forceCollide(d => radiusScale(d.value) + 3))
                 .alphaDecay(0.02);
 
-            const nodes = window.chartGroup.selectAll(".node")
-                .data(filteredData, d => d.name)
-                .enter().append("circle")
-                .attr("class", "node")
-                .attr("r", d => radiusScale(d.value))
-                .attr("fill", d => colors[d.category])
-                .attr("fill-opacity", 0.6)
-                .attr("stroke", d => d3.color(colors[d.category]).darker())
-                .on("mouseover", (event, d) => {
-                    window.tooltip.style("display", "block").html(`<strong style="color:${colors[d.category]}">${d.name}</strong><br><strong>${d.value} Genes</strong>`);
-                })
-                .on("mousemove", (event) => {
-                    const [x, y] = d3.pointer(event, document.getElementById('viz-container'));
-                    window.tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
-                })
+            const nodes = window.chartGroup.selectAll(".node").data(filteredData, d => d.name).enter().append("circle").attr("class", "node")
+                .attr("r", d => radiusScale(d.value)).attr("fill", d => colors[d.category]).attr("fill-opacity", 0.6).attr("stroke", d => d3.color(colors[d.category]).darker())
+                .on("mouseover", (event, d) => { window.tooltip.style("display", "block").html(`<strong style="color:${colors[d.category]}">${d.name}</strong><br><strong>${d.value} Genes</strong>`); })
+                .on("mousemove", (event) => { const [x, y] = d3.pointer(event, document.getElementById('viz-container')); window.tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px"); })
                 .on("mouseleave", () => window.tooltip.style("display", "none"))
-                .on("click", (event, d) => {
-                    event.stopPropagation();
-                    document.getElementById('term-search').value = d.name;
-                    highlightBubble(d.name);
-                    showGenesSidebar(d);
-                });
+                .on("click", (event, d) => { event.stopPropagation(); document.getElementById('term-search').value = d.name; highlightBubble(d.name); showGenesSidebar(d); });
 
-            simulation.on("tick", () => {
-                nodes.attr("cx", d => d.x).attr("cy", d => d.y);
-            });
+            simulation.on("tick", () => { nodes.attr("cx", d => d.x).attr("cy", d => d.y); });
         }
 
         function highlightBubble(nodeName) {
-            window.chartGroup.selectAll(".node")
-                .attr("fill-opacity", d => d.name === nodeName ? 1 : 0.15)
-                .attr("stroke", d => d.name === nodeName ? "#fff" : d3.color(colors[d.category]).darker())
-                .attr("stroke-width", d => d.name === nodeName ? 3 : 1);
+            window.chartGroup.selectAll(".node").attr("fill-opacity", d => d.name === nodeName ? 1 : 0.15).attr("stroke", d => d.name === nodeName ? "#fff" : d3.color(colors[d.category]).darker()).attr("stroke-width", d => d.name === nodeName ? 3 : 1);
         }
 
-        function resetBubbleHighlight() {
-            window.chartGroup.selectAll(".node").attr("fill-opacity", 0.6).attr("stroke", d => d3.color(colors[d.category]).darker()).attr("stroke-width", 1);
-        }
+        function resetBubbleHighlight() { window.chartGroup.selectAll(".node").attr("fill-opacity", 0.6).attr("stroke", d => d3.color(colors[d.category]).darker()).attr("stroke-width", 1); }
 
         function showGenesSidebar(d) {
             document.getElementById('placeholder-text').style.display = 'none';
@@ -389,20 +305,14 @@
             
             const listContainer = document.getElementById('sidebar-list');
             listContainer.innerHTML = "";
-            
             d.genes.forEach(g => {
                 const a = document.createElement('a');
-                a.className = 'item-card';
-                a.href = `genome.html?search=${g.id}`;
-                a.target = "_blank";
+                a.className = 'item-card'; a.href = `genome.html?search=${g.id}`; a.target = "_blank";
                 a.innerHTML = `<span class="item-id">${g.id}</span>` + (g.name ? `<span class="item-name">${g.name}</span>` : '');
                 listContainer.appendChild(a);
             });
         }
 
-        // ==========================================
-        // MODE 2: GENE NETWORK (EGOCENTRIC GRAPH)
-        // ==========================================
         function drawGeneNetwork(geneId) {
             window.chartGroup.selectAll("*").remove();
             if (simulation) simulation.stop();
@@ -411,61 +321,36 @@
             const height = document.getElementById('viz-container').clientHeight;
             const geneData = geneIndex.get(geneId);
 
-            // Construct Network Data
             let nodes = [{ id: geneId, type: 'gene', name: geneData.name }];
             let links = [];
 
-            geneData.terms.forEach(t => {
-                nodes.push({ id: t.name, type: 'term', category: t.category, count: t.value });
-                links.push({ source: geneId, target: t.name });
-            });
+            geneData.terms.forEach(t => { nodes.push({ id: t.name, type: 'term', category: t.category, count: t.value }); links.push({ source: geneId, target: t.name }); });
 
-            // Update Sidebar
             showNetworkSidebar(geneData);
 
-            // Physics Simulation
             simulation = d3.forceSimulation(nodes)
                 .force("link", d3.forceLink(links).id(d => d.id).distance(160))
                 .force("charge", d3.forceManyBody().strength(-500))
                 .force("center", d3.forceCenter(width / 2, height / 2))
                 .force("collide", d3.forceCollide().radius(d => d.type === 'gene' ? 40 : 25));
 
-            // Draw Links
-            const linkElements = window.chartGroup.append("g")
-                .selectAll("line").data(links).enter().append("line")
-                .attr("class", "link");
+            const linkElements = window.chartGroup.append("g").selectAll("line").data(links).enter().append("line").attr("class", "link");
 
-            // Draw Nodes
-            const nodeElements = window.chartGroup.append("g")
-                .selectAll("circle").data(nodes).enter().append("circle")
-                .attr("class", "node")
-                .attr("r", d => d.type === 'gene' ? 25 : 15)
-                .attr("fill", d => d.type === 'gene' ? "#ff9800" : colors[d.category])
-                .attr("stroke", d => d.type === 'gene' ? "#fff" : d3.color(colors[d.category]).darker())
+            const nodeElements = window.chartGroup.append("g").selectAll("circle").data(nodes).enter().append("circle").attr("class", "node")
+                .attr("r", d => d.type === 'gene' ? 25 : 15).attr("fill", d => d.type === 'gene' ? "#ff9800" : colors[d.category]).attr("stroke", d => d.type === 'gene' ? "#fff" : d3.color(colors[d.category]).darker())
                 .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended))
                 .on("mouseover", (event, d) => {
-                    let html = d.type === 'gene' ? 
-                        `<strong style="color:#ff9800">${d.id}</strong><br>${d.name || "Unknown Product"}` : 
-                        `<strong style="color:${colors[d.category]}">${d.id}</strong><br>${d.category}`;
+                    let html = d.type === 'gene' ? `<strong style="color:#ff9800">${d.id}</strong><br>${d.name || "Unknown Product"}` : `<strong style="color:${colors[d.category]}">${d.id}</strong><br>${d.category}`;
                     window.tooltip.style("display", "block").html(html);
                 })
-                .on("mousemove", (event) => {
-                    const [x, y] = d3.pointer(event, document.getElementById('viz-container'));
-                    window.tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px");
-                })
+                .on("mousemove", (event) => { const [x, y] = d3.pointer(event, document.getElementById('viz-container')); window.tooltip.style("left", (x + 15) + "px").style("top", (y - 20) + "px"); })
                 .on("mouseleave", () => window.tooltip.style("display", "none"));
 
-            // Draw Labels
-            const labelElements = window.chartGroup.append("g")
-                .selectAll("text").data(nodes).enter().append("text")
-                .attr("class", "node-label")
-                .attr("dx", d => d.type === 'gene' ? 30 : 20)
-                .attr("dy", 4)
-                .text(d => d.type === 'gene' ? `${d.id} | ${d.name || "Unknown"}` : d.id);
+            const labelElements = window.chartGroup.append("g").selectAll("text").data(nodes).enter().append("text").attr("class", "node-label")
+                .attr("dx", d => d.type === 'gene' ? 30 : 20).attr("dy", 4).text(d => d.type === 'gene' ? `${d.id} | ${d.name || "Unknown"}` : d.id);
 
             simulation.on("tick", () => {
-                linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-                            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
                 nodeElements.attr("cx", d => d.x).attr("cy", d => d.y);
                 labelElements.attr("x", d => d.x).attr("y", d => d.y);
             });
@@ -491,13 +376,7 @@
             function renderCategory(title, array, catClass) {
                 if (array.length === 0) return;
                 listContainer.insertAdjacentHTML('beforeend', `<div class="cat-header ${catClass}">${title}</div>`);
-                array.forEach(t => {
-                    listContainer.insertAdjacentHTML('beforeend', `
-                        <div class="item-card" style="cursor:default;">
-                            <span class="item-id" style="color:inherit;">${t.name}</span>
-                        </div>
-                    `);
-                });
+                array.forEach(t => { listContainer.insertAdjacentHTML('beforeend', `<div class="item-card" style="cursor:default;"><span class="item-id" style="color:inherit;">${t.name}</span></div>`); });
             }
 
             renderCategory("Biological Process", bp, "cat-bp");
